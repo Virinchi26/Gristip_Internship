@@ -66,9 +66,7 @@ def resize_pdf():
             batch_images = images[i:i + images_per_page]
             # Determine the layout of the images on the page based on the number of images in the batch
             # Determine the number of rows and columns based on the number of images in the batch
-            # Adjust the layout based on the number of images in the batch
-            # For example, if there are 3 images, arrange them in a 2x2 grid with the fourth quadrant empty
-            
+            # Adjust the layout based on the number of images in the batch            
             # 1 image: 1x1 grid
             if len(batch_images) == 1:
                 rows, cols = 1, 1
