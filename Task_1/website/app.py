@@ -51,14 +51,7 @@ def resize_pdf(input_files, output_file):
         for i in range(0, len(images), images_per_page):
             batch_images = images[i:i + images_per_page]
 
-            if len(batch_images) == 1:
-                rows, cols = 1, 1
-            elif len(batch_images) == 2:
-                rows, cols = 1, 2
-            elif len(batch_images) == 3:
-                rows, cols = 2, 2
-            else:
-                rows, cols = 2, 2
+            rows, cols = 2, 2
 
             quadrant_width = (page_width - (cols + 1) * margin) // cols
             quadrant_height = (page_height - (rows + 1) * margin) // rows

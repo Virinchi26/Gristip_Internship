@@ -67,17 +67,8 @@ def resize_pdf():
             # Determine the layout of the images on the page based on the number of images in the batch
             # Determine the number of rows and columns based on the number of images in the batch
             # Adjust the layout based on the number of images in the batch            
-            # 1 image: 1x1 grid
-            if len(batch_images) == 1:
-                rows, cols = 1, 1
-            # 2 images: 1x2 grid
-            elif len(batch_images) == 2:
-                rows, cols = 1, 2
-            # 3 images: 2x2 grid with the fourth quadrant empty
-            elif len(batch_images) == 3:
-                rows, cols = 2, 2
-            else:
-                rows, cols = 2, 2
+
+            rows, cols = 2, 2
             
             # Calculate the width and height of each quadrant based on the number of rows and columns
             quadrant_width = (page_width - (cols + 1) * margin) // cols
