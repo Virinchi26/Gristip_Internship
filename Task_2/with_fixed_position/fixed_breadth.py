@@ -3,7 +3,7 @@ import fitz  # PyMuPDF
 import io
 
 # Function to extract and save the label as an image with high quality
-def extract_label_from_pdf(pdf_path, page_num=0, quadrant=(0, 0, 300, 300), zoom_factor=4, background_color=(255, 255, 255)):
+def extract_label_from_pdf(pdf_path, page_num=0, quadrant=(0, 0, 300, 300), zoom_factor=10, background_color=(255, 255, 255)):
     # Open the PDF
     doc = fitz.open(pdf_path)
 
@@ -17,7 +17,7 @@ def extract_label_from_pdf(pdf_path, page_num=0, quadrant=(0, 0, 300, 300), zoom
     matrix = fitz.Matrix(zoom_factor, zoom_factor)  # Increasing zoom_factor for better resolution
     
     # Crop the area from the page and render it with the matrix for higher DPI
-    pix = page.get_pixmap(matrix=matrix, clip=rect, dpi=300)  # Ensure high DPI
+    pix = page.get_pixmap(matrix=matrix, clip=rect, dpi=600)  # Ensure high DPI
     
     # Convert the pixmap to a PIL Image
     img = Image.open(io.BytesIO(pix.tobytes()))
@@ -85,7 +85,7 @@ def place_label_on_courier(courier_path, label_img, position=(100, 100), size=(2
     courier = Image.open(courier_path)
 
     # Resize label to fit the designated rectangular area (if necessary)
-    label_img = label_img.resize(size, Image.Resampling.LANCZOS)  # Resize the label using high-quality resampling
+    label_img = label_img.resize(size, Image.LANCZOS)  # Resize the label using high-quality resampling
     
     # Optionally, rotate the label before pasting (if needed)
     if rotate_angle != 0:
@@ -107,7 +107,7 @@ pdf_path = "V:/Web_Development/Gristip_Internship/Task_2/label.pdf"
 courier_path = "V:/Web_Development/Gristip_Internship/Task_2/input_breadth.png"  # Path to the courier image
 
 # Extract the label (without adding a border)
-label_img = extract_label_from_pdf(pdf_path, page_num=0, quadrant=(0, 0, 300, 300), zoom_factor=4)
+label_img = extract_label_from_pdf(pdf_path, page_num=0, quadrant=(0, 0, 300, 300), zoom_factor=10)
 
 # Place the label on the courier image at a fixed position, resize it, and rotate it if needed
 place_label_on_courier(courier_path, label_img, position=(140, 150), size=(185, 250), rotate_angle=0)
