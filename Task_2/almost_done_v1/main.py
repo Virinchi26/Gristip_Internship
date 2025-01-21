@@ -25,7 +25,7 @@ def add_label_to_image(background_image_path, label_image_path, position, white_
     background.paste(label, (x, y), mask)  # Use the alpha channel as mask for transparency
 
     # Save the final image with the label
-    background.save("final_image_with_label.png")
+    background.save("final_image_with_label_with_no_background.png")
     print("Label added and saved as 'final_image_with_label.png'.")
 
 # Function to find the white area in the image and return its position and size
@@ -57,7 +57,7 @@ def find_white_area(image_path, threshold=200):
 
 # Example usage
 background_image_path = "V:\Web_Development\Gristip_Internship\Task_2\input_length.png"  # Path to your courier image
-label_image_path = "V:/Web_Development/Gristip_Internship/Task_2/only_label/extracted_label_high_quality.png"   # Path to the extracted label image
+label_image_path = "V:\Web_Development\Gristip_Internship\Task_2\only_label\extracted_label_no_background.png"   # Path to the extracted label image
 
 # Find the position and size of the white area dynamically
 position, white_area_size = find_white_area(background_image_path)
