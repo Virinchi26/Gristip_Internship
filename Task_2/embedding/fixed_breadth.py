@@ -17,7 +17,7 @@ def extract_label_from_pdf(pdf_path, page_num=0, quadrant=(0, 0, 300, 300), zoom
     matrix = fitz.Matrix(zoom_factor, zoom_factor)  # Increasing zoom_factor for better resolution
     
     # Crop the area from the page and render it with the matrix for higher DPI
-    pix = page.get_pixmap(matrix=matrix, clip=rect, dpi=600)  # Ensure high DPI
+    pix = page.get_pixmap(matrix=matrix, clip=rect, dpi=600)  # Ensure high DPI for better quality
     
     # Convert the pixmap to a PIL Image
     img = Image.open(io.BytesIO(pix.tobytes()))
