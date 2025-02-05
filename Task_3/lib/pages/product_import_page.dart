@@ -141,6 +141,7 @@
 //     );
 //   }
 // }
+
 import 'dart:io';
 import 'package:excel/excel.dart';
 import 'package:file_picker/file_picker.dart';
@@ -156,6 +157,7 @@ class _ProductImportPageState extends State<ProductImportPage> {
   bool isLoading = false;
   String message = "";
   bool _isPicking = false; // Prevent multiple file picker instances
+  List<Map<String, dynamic>> products = []; // Store imported products
 
   // Function to show a loading dialog
   void showLoadingDialog() {
@@ -210,7 +212,7 @@ class _ProductImportPageState extends State<ProductImportPage> {
     try {
       var bytes = file.readAsBytesSync();
       var excel = Excel.decodeBytes(bytes);
-      List<Map<String, dynamic>> products = [];
+      List<Map<String, dynamic>> tempProducts = [];
 
       // Parse the data
       for (var sheet in excel.tables.keys) {
@@ -219,7 +221,7 @@ class _ProductImportPageState extends State<ProductImportPage> {
           for (int i = 1; i < table.rows.length; i++) {
             var row = table.rows[i];
             if (row.length >= 4) {
-              products.add({
+              tempProducts.add({
                 "name": row[0]?.value?.toString() ?? "", // Product name
                 "sellingPrice": row[1]?.value ?? 0.0, // Selling price
                 "mrp": row[2]?.value ?? 0.0, // MRP
@@ -232,7 +234,7 @@ class _ProductImportPageState extends State<ProductImportPage> {
 
       // Insert into SQLite
       final dbHelper = DatabaseHelper();
-      for (var product in products) {
+      for (var product in tempProducts) {
         await dbHelper.insertOrUpdateProduct({
           "name": product['name'],
           "sellingPrice": product['sellingPrice'],
@@ -242,6 +244,7 @@ class _ProductImportPageState extends State<ProductImportPage> {
       }
 
       setState(() {
+        products = tempProducts;
         message = "Products imported successfully!";
       });
     } catch (e) {
@@ -304,6 +307,29 @@ class _ProductImportPageState extends State<ProductImportPage> {
                       color: message.contains('success') ? Colors.green : Colors.red,
                     ),
                     textAlign: TextAlign.center,
+                  ),
+                SizedBox(height: 20),
+                if (products.isNotEmpty)
+                  Expanded(
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: DataTable(
+                        columns: [
+                          DataColumn(label: Text('Name')),
+                          DataColumn(label: Text('Selling Price')),
+                          DataColumn(label: Text('MRP')),
+                          DataColumn(label: Text('Stock Quantity')),
+                        ],
+                        rows: products.map((product) {
+                          return DataRow(cells: [
+                            DataCell(Text(product['name'])),
+                            DataCell(Text(product['sellingPrice'].toString())),
+                            DataCell(Text(product['mrp'].toString())),
+                            DataCell(Text(product['stockQuantity'].toString())),
+                          ]);
+                        }).toList(),
+                      ),
+                    ),
                   ),
               ],
             ],
