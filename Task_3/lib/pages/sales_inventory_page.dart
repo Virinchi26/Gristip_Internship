@@ -63,32 +63,49 @@ class _SalesInventoryPageState extends State<SalesInventoryPage> {
     );
   }
 }
-
+// Future<void> addProduct(String barcode, int inStock, int regularPrice,
+//     int salePrice, int purchasePrice, String name) async {
+//   final db = await database;
+//   await db.insert(
+//     'products',
+//     {
+//       'barcode': barcode,
+//       'inStock': inStock,
+//       'regularPrice': regularPrice,
+//       'salePrice': salePrice,
+//       'purchasePrice': purchasePrice,
+//       'name': name,
+//     },
+//     conflictAlgorithm: ConflictAlgorithm.replace,
+//   );
 class AddProductPage extends StatelessWidget {
+  final TextEditingController barcodeController = TextEditingController();
+  final TextEditingController inStockController = TextEditingController();
+  final TextEditingController regularPriceController = TextEditingController();
+  final TextEditingController salePriceController = TextEditingController();
+  final TextEditingController purchasePriceController = TextEditingController();
   final TextEditingController nameController = TextEditingController();
-  final TextEditingController sellingPriceController =
-      TextEditingController(); // For selling price
-  final TextEditingController mrpController =
-      TextEditingController(); // For MRP
-  final TextEditingController quantityController = TextEditingController();
   final DatabaseHelper dbHelper = DatabaseHelper();
 
   void addProduct(BuildContext context) async {
+    final barcode = barcodeController.text.trim();
+    final inStock = int.tryParse(inStockController.text) ?? 0;
+    final regularPrice = double.tryParse(regularPriceController.text) ?? 0.0;
+    final salePrice = double.tryParse(salePriceController.text) ?? 0.0;
+    final purchasePrice = double.tryParse(purchasePriceController.text) ?? 0.0;
     final name = nameController.text.trim();
-    final sellingPrice = double.tryParse(sellingPriceController.text) ?? 0.0;
-    final mrp = double.tryParse(mrpController.text) ?? 0.0;
-    final quantity = int.tryParse(quantityController.text) ?? 0;
 
     try {
-      await dbHelper.addProduct(
-          name, sellingPrice, mrp, quantity); // Save only selling price and MRP
+      await dbHelper.addProduct(barcode, inStock, regularPrice, salePrice, purchasePrice, name);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Product added successfully.')),
       );
+      barcodeController.clear();
+      inStockController.clear();
+      regularPriceController.clear();
+      salePriceController.clear();
+      purchasePriceController.clear();
       nameController.clear();
-      sellingPriceController.clear();
-      mrpController.clear();
-      quantityController.clear();
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error adding product: $e')),
@@ -105,23 +122,32 @@ class AddProductPage extends StatelessWidget {
         child: Column(
           children: [
             TextField(
+              controller: barcodeController,
+              decoration: InputDecoration(labelText: 'Barcode'),
+            ),
+            TextField(
+              controller: inStockController,
+              decoration: InputDecoration(labelText: 'In Stock'),
+              keyboardType: TextInputType.number,
+            ),
+            TextField(
+              controller: regularPriceController,
+              decoration: InputDecoration(labelText: 'Regular Price'),
+              keyboardType: TextInputType.number,
+            ),
+            TextField(
+              controller: salePriceController,
+              decoration: InputDecoration(labelText: 'Sale Price'),
+              keyboardType: TextInputType.number,
+            ),
+            TextField(
+              controller: purchasePriceController,
+              decoration: InputDecoration(labelText: 'Purchase Price'),
+              keyboardType: TextInputType.number,
+            ),
+            TextField(
               controller: nameController,
               decoration: InputDecoration(labelText: 'Product Name'),
-            ),
-            TextField(
-              controller: sellingPriceController,
-              decoration: InputDecoration(labelText: 'Selling Price'),
-              keyboardType: TextInputType.number,
-            ),
-            TextField(
-              controller: mrpController,
-              decoration: InputDecoration(labelText: 'MRP'),
-              keyboardType: TextInputType.number,
-            ),
-            TextField(
-              controller: quantityController,
-              decoration: InputDecoration(labelText: 'Quantity'),
-              keyboardType: TextInputType.number,
             ),
             SizedBox(height: 16),
             ElevatedButton(

@@ -38,15 +38,29 @@ class DatabaseHelper {
     ''');
 
     // Product table
-    await db.execute(''' 
+        await db.execute(''' 
       CREATE TABLE products ( 
         id INTEGER PRIMARY KEY AUTOINCREMENT, 
-        name TEXT UNIQUE NOT NULL, 
-        sellingPrice REAL NOT NULL, 
-        mrp REAL NOT NULL, 
-        stockQuantity INTEGER NOT NULL 
+        barcode TEXT UNIQUE NOT NULL,
+        inStock INTEGER NOT NULL,
+        regularPrice INTEGER NOT NULL,
+        salePrice INTEGER NOT NULL,
+        purchasePrice INTEGER NOT NULL,
+        name TEXT NOT NULL,
       ) 
     ''');
+      //     CREATE TABLE products ( 
+      //   id INTEGER PRIMARY KEY AUTOINCREMENT, 
+      //   name TEXT UNIQUE NOT NULL, 
+      //   sellingPrice REAL NOT NULL, 
+      //   mrp REAL NOT NULL, 
+      //   stockQuantity INTEGER NOT NULL 
+      // ) 
+    // name TEXT UNIQUE NOT NULL, 
+    //     sellingPrice REAL NOT NULL,  - salePrice
+    //     mrp REAL NOT NULL, - regularPrice
+    //    purchasePrice REAL NOT NULL, - purchasePrice
+    //     stockQuantity INTEGER NOT NULL 
 
     // Sales table
     await db.execute(''' 
@@ -80,16 +94,16 @@ class DatabaseHelper {
     }
   }
   // Get business overview
-  // Get business overview - Adjusted to new profit calculation (sellingPrice - mrp)
+  // Get business overview - Adjusted to new profit calculation (sellingPrice(purchasePrice) - mrp(salePrice))
   Future<Map<String, dynamic>> getBusinessOverview() async {
     final db = await database;
 
-    // Query to get total revenue, total products sold, and total profit (sellingPrice - mrp)
+    // Query to get total revenue, total products sold, and total profit (sellingPrice(purchasePrice) - mrp(salePrice))
     final result = await db.rawQuery(''' 
       SELECT 
-        SUM(p.sellingPrice * s.quantitySold) AS totalValue, 
+        SUM(p.purchasePrice * s.quantitySold) AS totalValue, 
         SUM(s.quantitySold) AS totalQuantity,
-        SUM((p.sellingPrice - p.mrp) * s.quantitySold) AS profit 
+        SUM((p.purchasePrice - p.salePrice) * s.quantitySold) AS profit 
       FROM sales s 
       JOIN products p ON s.productId = p.id
     ''');
@@ -108,69 +122,122 @@ class DatabaseHelper {
       };
     }
   }
-
+      //   name TEXT UNIQUE NOT NULL, 
+      //   sellingPrice REAL NOT NULL, 
+      //   mrp REAL NOT NULL, 
+      //   stockQuantity INTEGER NOT NULL 
   // Add a product - Using new sellingPrice and mrp fields
-  Future<void> addProduct(String name, double sellingPrice, double mrp, int stockQuantity) async {
-  final db = await database;
+//   Future<void> addProduct(String name, double sellingPrice, double mrp, int stockQuantity) async {
+//   final db = await database;
 
-  // Check if the product already exists
-  final existingProduct = await db.query(
-    'products',
-    where: 'name = ?',
-    whereArgs: [name],
-  );
+//   // Check if the product already exists
+//   final existingProduct = await db.query(
+//     'products',
+//     where: 'name = ?',
+//     whereArgs: [name],
+//   );
 
-  if (existingProduct.isNotEmpty) {
-    // If product exists, update stock
-    await db.rawUpdate('''
-      UPDATE products 
-      SET stockQuantity = stockQuantity + ?
-      WHERE name = ?
-    ''', [stockQuantity, name]);
-  } else {
-    // Insert new product
+//   if (existingProduct.isNotEmpty) {
+//     // If product exists, update stock
+//     await db.rawUpdate('''
+//       UPDATE products 
+//       SET stockQuantity = stockQuantity + ?
+//       WHERE name = ?
+//     ''', [stockQuantity, name]);
+//   } else {
+//     // Insert new product
+//     await db.insert(
+//       'products',
+//       {
+//         'name': name,
+//         'sellingPrice': sellingPrice,
+//         'mrp': mrp,
+//         'stockQuantity': stockQuantity
+//       },
+//       conflictAlgorithm: ConflictAlgorithm.replace,
+//     );
+//   }
+// }
+        // barode TEXT UNIQUE NOT NULL,
+        // inStock INTEGER NOT NULL,
+        // regularPrice INTEGER NOT NULL,
+        // salePrice INTEGER NOT NULL,
+        // purchasePrice INTEGER NOT NULL,
+        // name TEXT NOT NULL,
+  Future<void> addProduct(String barcode, int inStock, double regularPrice, double salePrice, double purchasePrice, String name ) async{
+    final db = await database;
     await db.insert(
       'products',
       {
+        'barcode': barcode,
+        'inStock': inStock,
+        'regularPrice': regularPrice,
+        'salePrice': salePrice,
+        'purchasePrice': purchasePrice,
         'name': name,
-        'sellingPrice': sellingPrice,
-        'mrp': mrp,
-        'stockQuantity': stockQuantity
       },
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
+
   }
-}
 
-   Future<void> insertOrUpdateProduct(Map<String, dynamic> product) async {
-  final db = await database;
+//    Future<void> insertOrUpdateProduct(Map<String, dynamic> product) async {
+//   final db = await database;
 
-  final existingProduct = await db.query(
-    'products',
-    where: 'name = ?',
-    whereArgs: [product['name']],
-  );
+//   final existingProduct = await db.query(
+//     'products',
+//     where: 'name = ?',
+//     whereArgs: [product['name']],
+//   );
 
-  if (existingProduct.isNotEmpty) {
-    // If product exists, update stockQuantity
-    await db.rawUpdate('''
-      UPDATE products 
-      SET stockQuantity = stockQuantity + ?
-      WHERE name = ?
-    ''', [product['stockQuantity'], product['name']]);
-  } else {
-    // If product doesn't exist, insert it as new product
-    await db.rawInsert('''
-      INSERT INTO products (name, sellingPrice, mrp, stockQuantity) 
-      VALUES (?, ?, ?, ?)
-    ''', [
-      product['name'],
-      product['sellingPrice'],
-      product['mrp'],
-      product['stockQuantity']
-    ]);
+//   if (existingProduct.isNotEmpty) {
+//     // If product exists, update stockQuantity
+//     await db.rawUpdate('''
+//       UPDATE products 
+//       SET stockQuantity = stockQuantity + ?
+//       WHERE name = ?
+//     ''', [product['stockQuantity'], product['name']]);
+//   } else {
+//     // If product doesn't exist, insert it as new product
+//     await db.rawInsert('''
+//       INSERT INTO products (name, sellingPrice, mrp, stockQuantity) 
+//       VALUES (?, ?, ?, ?)
+//     ''', [
+//       product['name'],
+//       product['sellingPrice'],
+//       product['mrp'],
+//       product['stockQuantity']
+//     ]);
+//   }
+// }
+
+  Future <void> insertOrUpdateProduct(Map<String, dynamic> product) async{
+    final db = await database;
+    final existingProduct = await db.query(
+      'products',
+      where: 'name = ?',
+      whereArgs: [product['name']],
+    );
+    if (existingProduct.isNotEmpty){
+      await db.rawUpdate('''
+        UPDATE products
+        SET inStock = inStock + ?
+        WHERE name = ?
+''', [product['inStock'], product['name']]);
+    } else{
+      await db.rawInsert('''
+        INSERT INTO products (barcode, inStock, regularPrice, salePrice, purchasePrice, name)
+        VALUES (?, ?, ?, ?, ?, ?)
+      ''', [
+        product['barcode'],
+        product['inStock'],
+        product['regularPrice'],
+        product['salePrice'],
+        product['purchasePrice'],
+        product['name'],
+      ]);
+    }
   }
-}
 
 
   // Get top-selling products
@@ -191,7 +258,7 @@ class DatabaseHelper {
     final db = await database;
     return await db.query(
       'products',
-      where: 'stockQuantity < ?',
+      where: 'inStock < ?',
       whereArgs: [threshold],
     );
   }
@@ -219,7 +286,7 @@ class DatabaseHelper {
   // Update the stock quantity by subtracting the quantity sold
   final updated = await db.rawUpdate('''
     UPDATE products 
-    SET stockQuantity = stockQuantity - ? 
+    SET inStock = inStock - ? 
     WHERE id = ?
   ''', [quantitySold, productId]);
 
@@ -233,7 +300,7 @@ class DatabaseHelper {
 
     if (product.isNotEmpty) {
       // Cast 'stockQuantity' to int (or double if required)
-      final stockQuantity = product.first['stockQuantity'] as int? ?? 0;
+      final stockQuantity = product.first['inStock'] as int? ?? 0;
       
       // Now you can safely compare it with '<'
       if (stockQuantity < 0) {
@@ -281,7 +348,7 @@ class DatabaseHelper {
   Future<List<Map<String, dynamic>>> getCartItems() async {
     final db = await database;
     return await db.rawQuery(
-      'SELECT Cart.id, Products.name, Products.sellingPrice, Cart.quantity '
+      'SELECT Cart.id, Products.name, Products.salePrice, Cart.quantity '
       'FROM Cart '
       'INNER JOIN Products ON Cart.productId = Products.id'
     );
@@ -338,7 +405,7 @@ class DatabaseHelper {
     final db = await database;
     await db.update(
       'products',
-      {'stockQuantity': newStock},
+      {'inStock': newStock},
       where: 'id = ?',
       whereArgs: [productId],
     );
@@ -357,7 +424,7 @@ class DatabaseHelper {
 
     final lowStockResult = await db.query(
       'products',
-      where: 'stockQuantity < ?',
+      where: 'inStock < ?',
       whereArgs: [10], // Low stock threshold
     );
 

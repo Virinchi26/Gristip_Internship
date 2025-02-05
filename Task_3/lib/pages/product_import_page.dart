@@ -207,6 +207,12 @@ class _ProductImportPageState extends State<ProductImportPage> {
     }
   }
 
+  // barode TEXT UNIQUE NOT NULL,
+  // inStock INTEGER NOT NULL,
+  // regularPrice INTEGER NOT NULL,
+  // salePrice INTEGER NOT NULL,
+  // purchasePrice INTEGER NOT NULL,
+  // name TEXT NOT NULL,
   // Function to process the Excel file and save data to SQLite
   Future<void> processExcelFile(File file) async {
     try {
@@ -219,15 +225,17 @@ class _ProductImportPageState extends State<ProductImportPage> {
         var table = excel.tables[sheet];
         if (table != null) {
           for (int i = 1; i < table.rows.length; i++) {
-            var row = table.rows[i];
-            if (row.length >= 4) {
-              tempProducts.add({
-                "name": row[0]?.value?.toString() ?? "", // Product name
-                "sellingPrice": row[1]?.value ?? 0.0, // Selling price
-                "mrp": row[2]?.value ?? 0.0, // MRP
-                "stockQuantity": row[3]?.value ?? 0, // Stock Quantity
-              });
-            }
+        var row = table.rows[i];
+        if (row.length >= 7) {
+          tempProducts.add({
+            "barcode": row[0]?.value?.toString() ?? "", // Barcode
+            "inStock": row[1]?.value ?? 0, // In Stock
+            "regularPrice": row[2]?.value ?? 0.0, // Regular Price
+            "salePrice": row[3]?.value ?? 0.0, // Sale Price
+            "purchasePrice": row[4]?.value ?? 0.0, // Purchase Price
+            "name": row[5]?.value?.toString() ?? "", // Product name
+          });
+        }
           }
         }
       }
@@ -236,10 +244,12 @@ class _ProductImportPageState extends State<ProductImportPage> {
       final dbHelper = DatabaseHelper();
       for (var product in tempProducts) {
         await dbHelper.insertOrUpdateProduct({
+          "barcode": product['barcode'],
+          "inStock": product['inStock'],
+          "regularPrice": product['regularPrice'],
+          "salePrice": product['salePrice'],
+          "purchasePrice": product['purchasePrice'],
           "name": product['name'],
-          "sellingPrice": product['sellingPrice'],
-          "mrp": product['mrp'],
-          "stockQuantity": product['stockQuantity'],
         });
       }
 
@@ -315,17 +325,21 @@ class _ProductImportPageState extends State<ProductImportPage> {
                       scrollDirection: Axis.horizontal,
                       child: DataTable(
                         columns: [
+                          DataColumn(label: Text('Barcode')),
+                          DataColumn(label: Text('In Stock')),
+                          DataColumn(label: Text('Regular Price')),
+                          DataColumn(label: Text('Sale Price')),
+                          DataColumn(label: Text('Purchase Price')),
                           DataColumn(label: Text('Name')),
-                          DataColumn(label: Text('Selling Price')),
-                          DataColumn(label: Text('MRP')),
-                          DataColumn(label: Text('Stock Quantity')),
                         ],
                         rows: products.map((product) {
                           return DataRow(cells: [
+                            DataCell(Text(product['barcode'])),
+                            DataCell(Text(product['inStock'].toString())),
+                            DataCell(Text(product['regularPrice'].toString())),
+                            DataCell(Text(product['salePrice'].toString())),
+                            DataCell(Text(product['purchasePrice'].toString())),
                             DataCell(Text(product['name'])),
-                            DataCell(Text(product['sellingPrice'].toString())),
-                            DataCell(Text(product['mrp'].toString())),
-                            DataCell(Text(product['stockQuantity'].toString())),
                           ]);
                         }).toList(),
                       ),
@@ -340,3 +354,23 @@ class _ProductImportPageState extends State<ProductImportPage> {
   }
 }
 
+
+// columns: [
+//                     DataColumn(label: Text('Barcode')),
+//                     DataColumn(label: Text('In Stock')),
+//                     DataColumn(label: Text('Regular Price')),
+//                     DataColumn(label: Text('Sale Price')),
+//                     DataColumn(label: Text('Purchase Price')),
+//                     DataColumn(label: Text('Name')),
+//                   ],
+//                   rows: products.map((product) {
+//                     return DataRow(cells: [
+                    // DataCell(Text(product['barcode'])),
+                    // DataCell(Text(product['inStock'].toString())),
+                    // DataCell(Text(product['regularPrice'].toString())),
+                    // DataCell(Text(product['salePrice'].toString())),
+                    // DataCell(Text(product['purchasePrice'].toString())),
+                    // DataCell(Text(product['name'])),
+//                     ]);
+//                   }).toList(),
+//                   ),
