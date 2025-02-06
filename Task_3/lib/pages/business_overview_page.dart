@@ -166,7 +166,7 @@ class _BusinessOverviewPageState extends State<BusinessOverviewPage>
                       contentPadding: EdgeInsets.symmetric(horizontal: 8.0),
                       leading: Icon(Icons.warning, color: Colors.orange),
                       title: Text('${product['name']}'),
-                      subtitle: Text('Remaining Stock: ${product['stockQuantity']}'),
+                      subtitle: Text('Remaining Stock: ${product['inStock']}'),
                     ),
                   );
                 }
@@ -191,7 +191,7 @@ class _BusinessOverviewPageState extends State<BusinessOverviewPage>
                     contentPadding: EdgeInsets.symmetric(horizontal: 8.0),
                     leading: Icon(Icons.inventory, color: Colors.blue),
                     title: Text('${product['name']}'),
-                    subtitle: Text('Remaining Stock: ${product['stockQuantity']}'),
+                    subtitle: Text('Remaining Stock: ${product['inStock']}'),
                   ),
                 );
               },

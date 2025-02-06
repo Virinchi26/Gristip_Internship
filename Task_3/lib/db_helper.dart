@@ -292,10 +292,10 @@ class DatabaseHelper {
 
     if (product.isNotEmpty) {
       // Cast 'stockQuantity' to int (or double if required)
-      final stockQuantity = product.first['inStock'] as int? ?? 0;
+      final inStock = product.first['inStock'] as int? ?? 0;
       
       // Now you can safely compare it with '<'
-      if (stockQuantity < 0) {
+      if (inStock < 0) {
         throw Exception("Not enough stock available.");
       }
     }
