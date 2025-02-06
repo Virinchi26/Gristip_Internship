@@ -173,7 +173,7 @@ class SellProductPage extends StatelessWidget {
     final product = await dbHelper.getProductByName(name);
     if (product != null) {
       final productId = product['id'] as int;
-      final currentStock = product['stockQuantity'] as int;
+      final currentStock = product['inStock'] as int;
 
       if (currentStock >= quantity) {
         await dbHelper.insertSale(productId, quantity);
