@@ -1,7 +1,8 @@
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
-import 'package:crypto/crypto.dart';
+import 'package:crypto/crypto.dart' as crypto;
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 
 class DatabaseHelper {
   static final DatabaseHelper _instance = DatabaseHelper._internal();
@@ -46,7 +47,7 @@ class DatabaseHelper {
         regularPrice INTEGER NOT NULL,
         salePrice INTEGER NOT NULL,
         purchasePrice INTEGER NOT NULL,
-        name TEXT NOT NULL,
+        name TEXT NOT NULL
       ) 
     ''');
       //     CREATE TABLE products ( 
@@ -84,15 +85,6 @@ class DatabaseHelper {
 
     // Additional table creation logic if required
   }
-  Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
-    if (oldVersion < 2) {
-      await db.execute(''' 
-        ALTER TABLE products ADD COLUMN mrp REAL NOT NULL DEFAULT 0.0
-      ''');
-
-      // Optionally add other updates here, such as removing costPrice or adding new columns
-    }
-  }
   // Get business overview
   // Get business overview - Adjusted to new profit calculation (sellingPrice(purchasePrice) - mrp(salePrice))
   Future<Map<String, dynamic>> getBusinessOverview() async {
@@ -110,9 +102,9 @@ class DatabaseHelper {
 
     if (result.isNotEmpty) {
       return {
-        'totalValue': result.first['totalValue'] ?? 0.0,
-        'totalQuantity': result.first['totalQuantity'] ?? 0,
-        'profit': result.first['profit'] ?? 0.0,
+        'totalValue': result.first['totalValue'],
+        'totalQuantity': result.first['totalQuantity'],
+        'profit': result.first['profit'],
       };
     } else {
       return {
@@ -369,7 +361,7 @@ class DatabaseHelper {
   if (username.isEmpty || password.isEmpty) {
     return false; // Prevent empty username/password from being checked
   }
-
+      // Use a logging framework instead of print
   final db = await database;
   String hashedPassword = _hashPassword(password);
 
@@ -386,7 +378,7 @@ class DatabaseHelper {
   // Hash password for secure storage
   String _hashPassword(String password) {
     final bytes = utf8.encode(password);
-    return sha256.convert(bytes).toString();
+    return crypto.sha256.convert(bytes).toString();
   }
 
   // Get product by name

@@ -226,19 +226,32 @@ class _ProductImportPageState extends State<ProductImportPage> {
         if (table != null) {
           for (int i = 1; i < table.rows.length; i++) {
         var row = table.rows[i];
-        if (row.length >= 7) {
+        if (row.length >= 6) {
           tempProducts.add({
             "barcode": row[0]?.value?.toString() ?? "", // Barcode
-            "inStock": row[1]?.value ?? 0, // In Stock
-            "regularPrice": row[2]?.value ?? 0.0, // Regular Price
-            "salePrice": row[3]?.value ?? 0.0, // Sale Price
-            "purchasePrice": row[4]?.value ?? 0.0, // Purchase Price
+            "inStock": row[1]?.value.toString() ?? 0, // In Stock
+            "regularPrice": row[2]?.value.toString() ?? 0.0, // Regular Price
+            "salePrice": row[3]?.value.toString() ?? 0.0, // Sale Price
+            "purchasePrice": row[4]?.value.toString() ?? 0.0, // Purchase Price
             "name": row[5]?.value?.toString() ?? "", // Product name
           });
         }
           }
         }
       }
+      //         if (row.length >= 6) {
+      //   tempProducts.add({
+      //     "barcode": row[0]?.toString() ?? "", // Barcode
+      //     "inStock": row[1]?.toString() ?? "0", // In Stock
+      //     "regularPrice": double.tryParse(row[2]?.toString() ?? "0") ??
+      //         0.0, // Regular Price
+      //     "salePrice":
+      //         double.tryParse(row[3]?.toString() ?? "0") ?? 0.0, // Sale Price
+      //     "purchasePrice": double.tryParse(row[4]?.toString() ?? "0") ??
+      //         0.0, // Purchase Price
+      //     "name": row[5]?.toString() ?? "", // Product name
+      //   });
+      // }
 
       // Insert into SQLite
       final dbHelper = DatabaseHelper();
