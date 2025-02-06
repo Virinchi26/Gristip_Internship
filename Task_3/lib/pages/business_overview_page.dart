@@ -33,9 +33,9 @@ class _BusinessOverviewPageState extends State<BusinessOverviewPage>
       final stock = await dbHelper.getRemainingStock();
 
       setState(() {
-        totalRevenue = data['totalValue'] ?? 0.0;
+        totalRevenue = (data['totalValue'] ?? 0.0).toDouble();
         totalProductsSold = data['totalQuantity'] ?? 0;
-        totalProfit = data['profit'] ?? 0.0;
+        totalProfit = (data['profit'] ?? 0.0).toDouble();
         topSellingProducts = topSelling;
         lowStockProducts = lowStock;
         remainingStock = stock;
