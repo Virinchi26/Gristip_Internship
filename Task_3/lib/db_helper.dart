@@ -173,6 +173,26 @@ class DatabaseHelper {
 
   }
 
+  // Add the method to fetch product by barcode
+Future<Map<String, dynamic>?> getProductByBarcode(String barcode) async {
+  final db = await database;
+  final result = await db.query(
+    'products',
+    where: 'barcode = ?',
+    whereArgs: [barcode],
+  );
+  
+  if (result.isNotEmpty) {
+    // Return the first matching product's details
+    return result.first;
+  } else {
+    // Return null if no product is found
+    return null;
+  }
+}
+
+
+
 //    Future<void> insertOrUpdateProduct(Map<String, dynamic> product) async {
 //   final db = await database;
 
