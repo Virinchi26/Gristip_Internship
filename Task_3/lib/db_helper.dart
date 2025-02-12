@@ -191,7 +191,18 @@ Future<Map<String, dynamic>?> getProductByBarcode(String barcode) async {
   }
 }
 
+// Get product names by query
+Future<List<String>> getProductNamesByQuery(String query) async {
+  final db = await database;
+  final result = await db.query(
+    'products',
+    columns: ['name'],
+    where: 'name LIKE ?',
+    whereArgs: ['%$query%'],
+  );
 
+  return result.map((product) => product['name'] as String).toList();
+}
 
 //    Future<void> insertOrUpdateProduct(Map<String, dynamic> product) async {
 //   final db = await database;

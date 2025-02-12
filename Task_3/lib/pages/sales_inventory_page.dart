@@ -78,7 +78,12 @@ class _SalesInventoryPageState extends State<SalesInventoryPage> {
 //     },
 //     conflictAlgorithm: ConflictAlgorithm.replace,
 //   );
-class AddProductPage extends StatelessWidget {
+class AddProductPage extends StatefulWidget {
+  @override
+  State<AddProductPage> createState() => _AddProductPageState();
+}
+
+class _AddProductPageState extends State<AddProductPage> {
   final TextEditingController barcodeController = TextEditingController();
   final TextEditingController inStockController = TextEditingController();
   final TextEditingController regularPriceController = TextEditingController();
@@ -86,6 +91,24 @@ class AddProductPage extends StatelessWidget {
   final TextEditingController purchasePriceController = TextEditingController();
   final TextEditingController nameController = TextEditingController();
   final DatabaseHelper dbHelper = DatabaseHelper();
+
+  List<String> suggestions = [];
+
+  ScrollController _scrollController = ScrollController();
+
+    void getProductSuggestions(String query) async {
+    if (query.isNotEmpty) {
+      // Assuming dbHelper has a method `getProductNamesByQuery`
+      List<String> products = await dbHelper.getProductNamesByQuery(query);
+      setState(() {
+        suggestions = products;
+      });
+    } else {
+      setState(() {
+        suggestions = [];
+      });
+    }
+  }
 
   void addProduct(BuildContext context) async {
     final barcode = barcodeController.text.trim();
@@ -112,59 +135,135 @@ class AddProductPage extends StatelessWidget {
       );
     }
   }
+    // Reset the product name
+  void resetProductName() {
+    setState(() {
+      nameController.clear(); // Clear the product name input
+      suggestions = []; // Clear any product suggestions
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: Text('Add Product')),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            TextField(
-              controller: barcodeController,
-              decoration: InputDecoration(labelText: 'Barcode'),
-            ),
-            TextField(
-              controller: inStockController,
-              decoration: InputDecoration(labelText: 'In Stock'),
-              keyboardType: TextInputType.number,
-            ),
-            TextField(
-              controller: regularPriceController,
-              decoration: InputDecoration(labelText: 'Regular Price'),
-              keyboardType: TextInputType.number,
-            ),
-            TextField(
-              controller: salePriceController,
-              decoration: InputDecoration(labelText: 'Sale Price'),
-              keyboardType: TextInputType.number,
-            ),
-            TextField(
-              controller: purchasePriceController,
-              decoration: InputDecoration(labelText: 'Purchase Price'),
-              keyboardType: TextInputType.number,
-            ),
-            TextField(
-              controller: nameController,
-              decoration: InputDecoration(labelText: 'Product Name'),
-            ),
-            SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: () => addProduct(context),
-              child: Text('Add Product'),
-            ),
-          ],
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            children: [
+              TextField(
+                controller: barcodeController,
+                decoration: InputDecoration(labelText: 'Barcode'),
+              ),
+              TextField(
+                controller: inStockController,
+                decoration: InputDecoration(labelText: 'In Stock'),
+                keyboardType: TextInputType.number,
+              ),
+              TextField(
+                controller: regularPriceController,
+                decoration: InputDecoration(labelText: 'Regular Price'),
+                keyboardType: TextInputType.number,
+              ),
+              TextField(
+                controller: salePriceController,
+                decoration: InputDecoration(labelText: 'Sale Price'),
+                keyboardType: TextInputType.number,
+              ),
+              TextField(
+                controller: purchasePriceController,
+                decoration: InputDecoration(labelText: 'Purchase Price'),
+                keyboardType: TextInputType.number,
+              ),
+              TextField(
+                controller: nameController,
+                decoration: InputDecoration(
+                  labelText: 'Product Name',
+                  suffixIcon: IconButton(
+                    icon: Icon(Icons.cancel, color: Colors.grey),
+                    onPressed:
+                        resetProductName, // Reset the text when the cancel button is pressed
+                  ),
+                ),
+                onChanged: (query) {
+                  getProductSuggestions(query);
+                },
+              ),
+              if (suggestions.isNotEmpty)
+                SizedBox(
+                  height: 200, // Fixed height for the suggestion list
+                  child: Scrollbar(
+                    thumbVisibility: true, // Make the scrollbar always visible
+                    thickness:
+                        6.0, // Make the scrollbar thicker for better visibility
+                    radius: Radius.circular(
+                        10), // Optional: Rounded edges for the scrollbar
+                    controller:
+                        _scrollController, // Attach the ScrollController here
+                    child: ListView.builder(
+                      controller:
+                          _scrollController, // Attach the ScrollController here too
+                      shrinkWrap: true,
+                      itemCount: suggestions.length,
+                      itemBuilder: (context, index) {
+                        return ListTile(
+                          leading: Icon(Icons.search,
+                              color: Colors
+                                  .grey), // Add a search icon to each suggestion
+                          title: Text(suggestions[index]),
+                          onTap: () {
+                            nameController.text = suggestions[index];
+                            setState(() {
+                              suggestions =
+                                  []; // Clear suggestions when one is selected
+                            });
+                          },
+                        );
+                      },
+                    ),
+                  ),
+                ),
+              SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () => addProduct(context),
+                child: Text('Add Product'),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 }
 
-class SellProductPage extends StatelessWidget {
+class SellProductPage extends StatefulWidget {
+  @override
+  _SellProductPageState createState() => _SellProductPageState();
+}
+class _SellProductPageState extends State<SellProductPage> {
   final TextEditingController nameController = TextEditingController();
   final TextEditingController quantityController = TextEditingController();
   final DatabaseHelper dbHelper = DatabaseHelper();
+
+  List <String> suggestions = [];
+  ScrollController _scrollController = ScrollController();
+
+  void getProductSuggestions(String query) async {
+    if (query.isNotEmpty) {
+      // Assuming dbHelper has a method `getProductNamesByQuery`
+      List<String> products = await dbHelper.getProductNamesByQuery(query);
+      setState(() {
+        suggestions = products;
+      });
+    } else {
+      setState(() {
+        suggestions = [];
+      });
+    }
+  }
+  
+
   void sellProduct(BuildContext context) async {
   final name = nameController.text.trim();
   final quantity = int.tryParse(quantityController.text) ?? 0;
@@ -204,34 +303,95 @@ class SellProductPage extends StatelessWidget {
   }
 }
 
+  // Reset the product name
+  void resetProductName() {
+    setState(() {
+      nameController.clear(); // Clear the product name input
+      suggestions = []; // Clear any product suggestions
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: Text('Sell Product')),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            TextField(
-              controller: nameController,
-              decoration: InputDecoration(labelText: 'Product Name'),
-            ),
-            TextField(
-              controller: quantityController,
-              decoration: InputDecoration(labelText: 'Quantity'),
-              keyboardType: TextInputType.number,
-            ),
-            SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: () => sellProduct(context),
-              child: Text('Sell Product'),
-            ),
-          ],
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            children: [
+              TextField(
+                controller: nameController,
+                decoration: InputDecoration(
+                  labelText: 'Product Name',
+                  suffixIcon: IconButton(
+                    icon: Icon(Icons.cancel, color: Colors.grey),
+                    onPressed:
+                        resetProductName, // Reset the text when the cancel button is pressed
+                  ),
+                ),
+                onChanged: (query) {
+                  getProductSuggestions(query);
+                },
+              ),
+              if (suggestions.isNotEmpty)
+                SizedBox(
+                  height: 200, // Fixed height for the suggestion list
+                  child: Scrollbar(
+                    thumbVisibility: true, // Make the scrollbar always visible
+                    thickness:
+                        6.0, // Make the scrollbar thicker for better visibility
+                    radius: Radius.circular(
+                        10), // Optional: Rounded edges for the scrollbar
+                    controller:
+                        _scrollController, // Attach the ScrollController here
+                    child: ListView.builder(
+                      controller:
+                          _scrollController, // Attach the ScrollController here too
+                      shrinkWrap: true,
+                      itemCount: suggestions.length,
+                      itemBuilder: (context, index) {
+                        return ListTile(
+                          leading: Icon(Icons.search,
+                              color: Colors
+                                  .grey), // Add a search icon to each suggestion
+                          title: Text(suggestions[index]),
+                          onTap: () {
+                            nameController.text = suggestions[index];
+                            setState(() {
+                              suggestions =
+                                  []; // Clear suggestions when one is selected
+                            });
+                          },
+                        );
+                      },
+                    ),
+                  ),
+                ),
+              TextField(
+                controller: quantityController,
+                decoration: InputDecoration(labelText: 'Quantity'),
+                keyboardType: TextInputType.number,
+              ),
+              SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () => sellProduct(context),
+                child: Text('Sell Product'),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
+
+  @override
+  void dispose() {
+    _scrollController.dispose(); // Don't forget to dispose of the controller
+    super.dispose();
+  }
 }
+
 
 class SalesReportPage extends StatelessWidget {
   final DatabaseHelper dbHelper = DatabaseHelper();
