@@ -25,7 +25,7 @@ class _InvoicePageState extends State<InvoicePage> {
     final items = await dbHelper.getCartItems(); // Retrieve cart items from the database
     double total = 0.0;
     for (var item in items) {
-      total += (item['sellingPrice'] as double) * (item['quantity'] as int);
+      total += (item['salePrice'] as int) * (item['quantity'] as int);
     }
     setState(() {
       cartItems = List<Map<String, dynamic>>.from(items); // Create a mutable copy
@@ -65,7 +65,7 @@ class _InvoicePageState extends State<InvoicePage> {
                     children: [
                       pw.Text(item['name']),
                       pw.Text('x${item['quantity']}'),
-                      pw.Text('\$${(item['sellingPrice'] as double) * (item['quantity'] as int)}'),
+                      pw.Text('\$${(item['salePrice'] as int) * (item['quantity'] as int)}'),
                     ],
                   );
                 }).toList(),
@@ -151,11 +151,11 @@ class _InvoicePageState extends State<InvoicePage> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text('Quantity: ${item['quantity']}'),
-                                Text('Price: \$${item['sellingPrice']}'),
+                                Text('Price: \$${item['salePrice']}'),
                               ],
                             ),
                             trailing: Text(
-                              'Total: \$${(item['sellingPrice'] as double) * (item['quantity'] as int)}',
+                              'Total: \$${(item['salePrice'] as int) * (item['quantity'] as int)}',
                               style: TextStyle(fontWeight: FontWeight.bold),
                             ),
                           ),
