@@ -95,7 +95,7 @@ class DatabaseHelper {
       SELECT 
         SUM(p.purchasePrice * s.quantitySold) AS totalValue, 
         SUM(s.quantitySold) AS totalQuantity,
-        SUM((p.purchasePrice - p.salePrice) * s.quantitySold) AS profit 
+        SUM((p.salePrice - p.purchasePrice) * s.quantitySold) AS profit 
       FROM sales s 
       JOIN products p ON s.productId = p.id
     ''');
