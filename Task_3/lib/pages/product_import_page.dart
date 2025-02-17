@@ -76,7 +76,8 @@ class _ProductImportPageState extends State<ProductImportPage> {
   }
 
   // Function to process the Excel file and save data to SQLite
-  Future<void> processExcelFile(File file) async {
+
+Future<void> processExcelFile(File file) async {
     try {
       var bytes = file.readAsBytesSync();
       var excel = Excel.decodeBytes(bytes);
@@ -87,7 +88,7 @@ class _ProductImportPageState extends State<ProductImportPage> {
         var table = excel.tables[sheet];
         if (table != null) {
           excelColumns = table.rows[0]
-              .map((col) => col.toString())
+              .map((col) => col?.value?.toString() ?? "")
               .toList(); // Get column names
 
           for (int i = 1; i < table.rows.length; i++) {
@@ -120,6 +121,7 @@ class _ProductImportPageState extends State<ProductImportPage> {
       Navigator.pop(context); // Close the loading dialog
     }
   }
+
 
   @override
   Widget build(BuildContext context) {
