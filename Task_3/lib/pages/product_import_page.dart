@@ -1,5 +1,5 @@
 import 'dart:io';
-import 'package:excel/excel.dart';
+import 'package:excel/excel.dart' as excel;
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:myapp/db_helper.dart';
@@ -80,12 +80,12 @@ class _ProductImportPageState extends State<ProductImportPage> {
 Future<void> processExcelFile(File file) async {
     try {
       var bytes = file.readAsBytesSync();
-      var excel = Excel.decodeBytes(bytes);
+      var excelFile = excel.Excel.decodeBytes(bytes);
       List<Map<String, dynamic>> tempProducts = [];
 
       // Parse the data
-      for (var sheet in excel.tables.keys) {
-        var table = excel.tables[sheet];
+      for (var sheet in excelFile.tables.keys) {
+        var table = excelFile.tables[sheet];
         if (table != null) {
           excelColumns = table.rows[0]
               .map((col) => col?.value?.toString() ?? "")
@@ -240,7 +240,6 @@ class ProductDataMappingPage extends StatefulWidget {
   @override
   _ProductDataMappingPageState createState() => _ProductDataMappingPageState();
 }
-
 class _ProductDataMappingPageState extends State<ProductDataMappingPage> {
   List<String?> columnMapping = [];
 
@@ -248,6 +247,25 @@ class _ProductDataMappingPageState extends State<ProductDataMappingPage> {
   void initState() {
     super.initState();
     columnMapping = List.filled(widget.dbColumns.length, null);
+  }
+
+  String getColumnDescription(String column) {
+    switch (column) {
+      case 'barcode':
+        return "A barcode is a small image of lines (bars) and spaces that is affixed to retail store items, identification cards, and postal mail to identify a particular product number, person, or location.";
+      case 'inStock':
+        return "Represents the current quantity of the product available in the inventory.";
+      case 'regularPrice':
+        return "The standard price of the product before any discounts or promotions.";
+      case 'salePrice':
+        return "The price of the product after a discount has been applied, usually during a sale.";
+      case 'purchasePrice':
+        return "The price at which the product was purchased from a supplier or manufacturer.";
+      case 'name':
+        return "The name or description of the product being sold.";
+      default:
+        return "";
+    }
   }
 
   @override
@@ -262,34 +280,80 @@ class _ProductDataMappingPageState extends State<ProductDataMappingPage> {
           children: [
             if (widget.manualMapping) ...[
               Expanded(
-                child: ListView.builder(
-                  itemCount: widget.dbColumns.length,
-                  itemBuilder: (context, index) {
-                    return Row(
-                      children: [
-                        Text(
-                          '${widget.dbColumns[index]}: ',
-                          style: TextStyle(fontSize: 16),
-                        ),
-                        SizedBox(width: 10),
-                        DropdownButton<String?>(
-                          hint: Text("Select column"),
-                          value: columnMapping[index],
-                          onChanged: (newValue) {
-                            setState(() {
-                              columnMapping[index] = newValue;
-                            });
-                          },
-                          items: widget.excelColumns.map((column) {
-                            return DropdownMenuItem<String?>(
-                              value: column,
-                              child: Text(column),
-                            );
-                          }).toList(),
-                        ),
-                      ],
-                    );
-                  },
+                child: Scrollbar(
+                  thickness: 8.0,
+                  radius: Radius.circular(10),
+                  thumbVisibility: true,
+                  trackVisibility: true,
+                  child: SingleChildScrollView(
+                    child: Column(
+                      children: List.generate(widget.dbColumns.length, (index) {
+                        return Container(
+                          margin: EdgeInsets.symmetric(vertical: 10),
+                          padding: EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                            // color: Colors.grey[200],
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: Colors.black,
+                              width: 2,
+                            ),
+                            ),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Left side - Database column and description
+                              Expanded(
+                                flex: 2,
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    // Database column name
+                                    Text(
+                                      '${widget.dbColumns[index]}',
+                                      style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold),
+                                    ),
+                                    SizedBox(height: 5),
+                                    // Description of the column
+                                    Text(
+                                      getColumnDescription(
+                                          widget.dbColumns[index]),
+                                      style: TextStyle(
+                                          fontSize: 14, color: Colors.grey),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              SizedBox(
+                                  width: 20), // Spacer between the two columns
+
+                              // Right side - Dropdown for mapping the Excel columns
+                              Expanded(
+                                flex: 2,
+                                child: DropdownButton<String?>(
+                                  hint: Text("Select column"),
+                                  value: columnMapping[index],
+                                  onChanged: (newValue) {
+                                    setState(() {
+                                      columnMapping[index] = newValue;
+                                    });
+                                  },
+                                  items: widget.excelColumns.map((column) {
+                                    return DropdownMenuItem<String?>(
+                                      value: column,
+                                      child: Text(column),
+                                    );
+                                  }).toList(),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }),
+                    ),
+                  ),
                 ),
               ),
               SizedBox(height: 20),
@@ -316,6 +380,7 @@ class _ProductDataMappingPageState extends State<ProductDataMappingPage> {
     );
   }
 }
+
 
 class ProductPreviewPage extends StatelessWidget {
   final List<Map<String, dynamic>> excelData;
