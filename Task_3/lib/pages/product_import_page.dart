@@ -355,7 +355,7 @@ class ProductPreviewPage extends StatelessWidget {
       SnackBar(content: Text("Data updated successfully!")),
     );
 
-    // Navigate to the Dashobard page after the operation
+    // Navigate to the Dashboard page after the operation
     Navigator.pushNamedAndRemoveUntil(context, '/dashboard', (route) => false);
   }
 
@@ -382,14 +382,15 @@ class ProductPreviewPage extends StatelessWidget {
                     DataColumn(label: Text('Name')),
                   ],
                   rows: excelData.map((product) {
-                    return DataRow(cells: [
-                      DataCell(Text(product['barcode'])),
-                      DataCell(Text(product['inStock'].toString())),
-                      DataCell(Text(product['regularPrice'].toString())),
-                      DataCell(Text(product['salePrice'].toString())),
-                      DataCell(Text(product['purchasePrice'].toString())),
-                      DataCell(Text(product['name'])),
-                    ]);
+                    // Apply column mapping when displaying the data
+                    List<DataCell> cells = [];
+                    for (int i = 0; i < dbColumns.length; i++) {
+                      String column = columnMapping[i] ?? dbColumns[i];
+                      var value = product[column];
+                      if (value == null) value = '';
+                      cells.add(DataCell(Text(value.toString())));
+                    }
+                    return DataRow(cells: cells);
                   }).toList(),
                 ),
               ),
