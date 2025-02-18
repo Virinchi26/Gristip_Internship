@@ -4,8 +4,11 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:path_provider/path_provider.dart';
 import 'dart:io';
+import 'package:flutter/services.dart'; // Required to load fonts
 
 class InvoicePage extends StatefulWidget {
+  const InvoicePage({super.key});
+
   @override
   _InvoicePageState createState() => _InvoicePageState();
 }
@@ -14,21 +17,38 @@ class _InvoicePageState extends State<InvoicePage> {
   final DatabaseHelper dbHelper = DatabaseHelper();
   List<Map<String, dynamic>> cartItems = [];
   double totalAmount = 0.0;
+  pw.Font? regularFont;
+  pw.Font? boldFont;
 
   @override
   void initState() {
     super.initState();
     fetchCartItems();
+    loadFonts(); // Load custom fonts
+  }
+
+  Future<void> loadFonts() async {
+    // Load the custom fonts
+    final fontRegular =
+        await rootBundle.load('assets/fonts/NotoSans-Regular.ttf');
+    final fontBold = await rootBundle.load('assets/fonts/NotoSans-Bold.ttf');
+
+    setState(() {
+      regularFont = pw.Font.ttf(fontRegular);
+      boldFont = pw.Font.ttf(fontBold);
+    });
   }
 
   Future<void> fetchCartItems() async {
-    final items = await dbHelper.getCartItems(); // Retrieve cart items from the database
+    final items =
+        await dbHelper.getCartItems(); // Retrieve cart items from the database
     double total = 0.0;
     for (var item in items) {
       total += (item['salePrice'] as int) * (item['quantity'] as int);
     }
     setState(() {
-      cartItems = List<Map<String, dynamic>>.from(items); // Create a mutable copy
+      cartItems =
+          List<Map<String, dynamic>>.from(items); // Create a mutable copy
       totalAmount = total;
     });
   }
@@ -36,12 +56,21 @@ class _InvoicePageState extends State<InvoicePage> {
   Future<void> generateInvoice(BuildContext context) async {
     if (cartItems.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Cart is empty. Add items to generate an invoice.')),
+        SnackBar(
+            content: Text('Cart is empty. Add items to generate an invoice.')),
       );
       return;
     }
 
     try {
+      // Ensure fonts are loaded
+      if (regularFont == null || boldFont == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Fonts are still loading. Try again.')),
+        );
+        return;
+      }
+
       // Create PDF document
       final pdf = pw.Document();
 
@@ -54,7 +83,10 @@ class _InvoicePageState extends State<InvoicePage> {
               children: [
                 pw.Text(
                   'Invoice',
-                  style: pw.TextStyle(fontSize: 24, fontWeight: pw.FontWeight.bold),
+                  style: pw.TextStyle(
+                      fontSize: 24,
+                      fontWeight: pw.FontWeight.bold,
+                      font: boldFont),
                 ),
                 pw.SizedBox(height: 20),
                 pw.Text('Items:', style: pw.TextStyle(fontSize: 18)),
@@ -63,9 +95,11 @@ class _InvoicePageState extends State<InvoicePage> {
                   return pw.Row(
                     mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                     children: [
-                      pw.Text(item['name']),
-                      pw.Text('x${item['quantity']}'),
-                      pw.Text('\$${(item['salePrice'] as int) * (item['quantity'] as int)}'),
+                      pw.Text(item['name'], style: pw.TextStyle(font: regularFont)),
+                      pw.Text('x${item['quantity']}', style: pw.TextStyle(font: regularFont)),
+                      pw.Text(
+                          '₹${(item['salePrice'] as int) * (item['quantity'] as int)}',
+                          style: pw.TextStyle(font: regularFont)),
                     ],
                   );
                 }).toList(),
@@ -75,8 +109,12 @@ class _InvoicePageState extends State<InvoicePage> {
                 pw.Row(
                   mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                   children: [
-                    pw.Text('Total Amount:', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-                    pw.Text('\$${totalAmount.toStringAsFixed(2)}', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                    pw.Text('Total Amount:',
+                        style: pw.TextStyle(
+                            fontWeight: pw.FontWeight.bold, font: boldFont)),
+                    pw.Text('\$${totalAmount.toStringAsFixed(2)}',
+                        style: pw.TextStyle(
+                            fontWeight: pw.FontWeight.bold, font: boldFont)),
                   ],
                 ),
               ],
@@ -85,34 +123,25 @@ class _InvoicePageState extends State<InvoicePage> {
         ),
       );
 
-      // Get the external storage directory (Downloads folder)
-      final directory = await getExternalStorageDirectory();
-      final downloadsDirectory = Directory('${directory!.path}/Downloads');
-
-      // Ensure the Downloads folder exists
-      if (!await downloadsDirectory.exists()) {
-        await downloadsDirectory.create(recursive: true);
-      }
-
-      // Save the PDF file to the Downloads folder
-      final file = File('${downloadsDirectory.path}/invoice_${DateTime.now().millisecondsSinceEpoch}.pdf');
+      // Save the PDF to the device
+      final output = await getExternalStorageDirectory();
+      final file = File('${output?.path}/invoice.pdf');
       await file.writeAsBytes(await pdf.save());
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Invoice saved successfully as PDF.')),
+        SnackBar(
+          content: Text('Invoice generated successfully.'),
+          action: SnackBarAction(
+            label: 'Open',
+            onPressed: () {
+              // Code to open the generated PDF
+            },
+          ),
+        ),
       );
-
-      // Clear the cart in the database (open it in write mode)
-      await dbHelper.clearCart();
-
-      // Immediately update the UI to reflect the cleared cart and reset total amount
-      setState(() {
-        cartItems.clear();
-        totalAmount = 0.0;
-      });
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error generating invoice: $e')),
+        SnackBar(content: Text('Failed to generate invoice.')),
       );
     }
   }
@@ -145,17 +174,18 @@ class _InvoicePageState extends State<InvoicePage> {
                         return Card(
                           margin: EdgeInsets.symmetric(vertical: 8),
                           child: ListTile(
-                            leading: Icon(Icons.shopping_bag, color: Colors.blue),
+                            leading:
+                                Icon(Icons.shopping_bag, color: Colors.blue),
                             title: Text(item['name']),
                             subtitle: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text('Quantity: ${item['quantity']}'),
-                                Text('Price: \$${item['salePrice']}'),
+                                Text('Price: ₹${item['salePrice']}'),
                               ],
                             ),
                             trailing: Text(
-                              'Total: \$${(item['salePrice'] as int) * (item['quantity'] as int)}',
+                              'Total: ₹${(item['salePrice'] as int) * (item['quantity'] as int)}',
                               style: TextStyle(fontWeight: FontWeight.bold),
                             ),
                           ),
@@ -172,7 +202,7 @@ class _InvoicePageState extends State<InvoicePage> {
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 Text(
-                  '\$${totalAmount.toStringAsFixed(2)}',
+                  '₹${totalAmount.toStringAsFixed(2)}',
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
               ],

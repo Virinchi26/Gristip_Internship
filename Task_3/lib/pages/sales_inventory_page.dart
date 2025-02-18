@@ -392,51 +392,109 @@ class _SellProductPageState extends State<SellProductPage> {
   }
 }
 
+class SalesReportPage extends StatefulWidget {
+  @override
+  _SalesReportPageState createState() => _SalesReportPageState();
+}
 
-class SalesReportPage extends StatelessWidget {
+class _SalesReportPageState extends State<SalesReportPage> {
   final DatabaseHelper dbHelper = DatabaseHelper();
+  String selectedDateRange = 'Today'; // Default range
 
-  Future<List<Map<String, dynamic>>> fetchSalesReport() async {
-    return await dbHelper.getSalesReport();
+  // Function to fetch sales report with the given date range
+  Future<List<Map<String, dynamic>>> fetchSalesReport(
+      String startDate, String endDate) async {
+    return await dbHelper.getSalesReport(startDate, endDate);
   }
 
   @override
   Widget build(BuildContext context) {
+    // Get the current date to handle dynamic date ranges
+    DateTime now = DateTime.now();
+    String startDate = '', endDate = '';
+
+    switch (selectedDateRange) {
+      case 'Yesterday':
+        startDate =
+            DateTime(now.year, now.month, now.day - 1).toIso8601String();
+        endDate = DateTime(now.year, now.month, now.day).toIso8601String();
+        break;
+      case 'Last Month':
+        startDate = DateTime(now.year, now.month - 1, 1).toIso8601String();
+        endDate = DateTime(now.year, now.month, 1).toIso8601String();
+        break;
+      case 'Last Year':
+        startDate = DateTime(now.year - 1, 1, 1).toIso8601String();
+        endDate = DateTime(now.year, 1, 1).toIso8601String();
+        break;
+      default: // Today
+        startDate = DateTime(now.year, now.month, now.day).toIso8601String();
+        endDate = DateTime(now.year, now.month, now.day + 1).toIso8601String();
+        break;
+    }
+
     return Scaffold(
       appBar: AppBar(title: Text('Sales Report')),
-      body: FutureBuilder<List<Map<String, dynamic>>>(
-        future: fetchSalesReport(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return Center(child: CircularProgressIndicator());
-          } else if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
-          } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return Center(child: Text('No sales data available.'));
-          } else {
-            final sales = snapshot.data!;
-            return ListView.builder(
-              itemCount: sales.length,
-              itemBuilder: (context, index) {
-                final sale = sales[index];
-                return Card(
-                  margin: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-                  child: ListTile(
-                    leading: Icon(Icons.receipt, color: Colors.blue),
-                    title: Text('Product: ${sale['name']}'),
-                    subtitle: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Quantity Sold: ${sale['quantitySold']}'),
-                        Text('Date: ${sale['saleDate']}'),
-                      ],
-                    ),
-                  ),
-                );
+      body: Column(
+        children: [
+          // Date Range Filter
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: DropdownButton<String>(
+              value: selectedDateRange,
+              onChanged: (newValue) {
+                setState(() {
+                  selectedDateRange = newValue!;
+                });
               },
-            );
-          }
-        },
+              items: ['Today', 'Yesterday', 'Last Month', 'Last Year']
+                  .map((range) => DropdownMenuItem<String>(
+                        value: range,
+                        child: Text(range),
+                      ))
+                  .toList(),
+            ),
+          ),
+
+          // Display sales report with selected date range
+          Expanded(
+            child: FutureBuilder<List<Map<String, dynamic>>>(
+              future: fetchSalesReport(startDate, endDate),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return Center(child: CircularProgressIndicator());
+                } else if (snapshot.hasError) {
+                  return Center(child: Text('Error: ${snapshot.error}'));
+                } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                  return Center(child: Text('No sales data available.'));
+                } else {
+                  final sales = snapshot.data!;
+                  return ListView.builder(
+                    itemCount: sales.length,
+                    itemBuilder: (context, index) {
+                      final sale = sales[index];
+                      return Card(
+                        margin:
+                            EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                        child: ListTile(
+                          leading: Icon(Icons.receipt, color: Colors.blue),
+                          title: Text('Product: ${sale['name']}'),
+                          subtitle: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('Quantity Sold: ${sale['quantitySold']}'),
+                              Text('Date: ${sale['saleDate']}'),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  );
+                }
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
