@@ -208,7 +208,7 @@ Future<void> processExcelFile(File file) async {
                           excelData: products,
                           dbColumns: dbColumns,
                           manualMapping: manualMapping,
-                          columnMapping: [],
+                          columnMapping: List.filled(dbColumns.length, null),
                         ),
                       ),
                     );
