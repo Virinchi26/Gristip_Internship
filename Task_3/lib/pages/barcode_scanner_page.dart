@@ -131,9 +131,9 @@ class _BarcodeScannerPageState extends State<BarcodeScannerPage> {
                   // Show all available product details
                   Text('Product Name: ${productDetails!['name']}'),
                   Text('Barcode: ${productDetails!['barcode']}'),
-                  Text('Regular Price: \$${productDetails!['regularPrice']}'),
-                  Text('Sale Price: \$${productDetails!['salePrice']}'),
                   Text('In Stock: ${productDetails!['inStock']}'),
+                  Text('Regular Price: ₹${productDetails!['regularPrice']}'),
+                  Text('Sale Price: ₹${productDetails!['salePrice']}'),
                 ] else ...[
                   Text('Product not found in the database.'),
                 ],
