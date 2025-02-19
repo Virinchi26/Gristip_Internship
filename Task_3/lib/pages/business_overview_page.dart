@@ -3,8 +3,6 @@ import 'package:intl/intl.dart';
 import 'package:myapp/db_helper.dart';
 
 class BusinessOverviewPage extends StatefulWidget {
-  const BusinessOverviewPage({super.key});
-
   @override
   _BusinessOverviewPageState createState() => _BusinessOverviewPageState();
 }
