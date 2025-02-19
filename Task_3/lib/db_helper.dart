@@ -87,42 +87,33 @@ class DatabaseHelper {
   }
   // Get business overview
   // Get business overview - Adjusted to new profit calculation (sellingPrice(purchasePrice) - mrp(salePrice))
-Future<Map<String, dynamic>> getBusinessOverview(String dateRange) async {
-  final db = await database;
+  Future<Map<String, dynamic>> getBusinessOverview() async {
+    final db = await database;
 
-  // Query to get total revenue, total products sold, and total profit (sellingPrice(purchasePrice) - mrp(salePrice))
-  final result = await db.rawQuery(''' 
-    SELECT 
-      SUM(p.purchasePrice * s.quantitySold) AS totalValue, 
-      SUM(s.quantitySold) AS totalQuantity,
-      SUM((p.salePrice - p.purchasePrice) * s.quantitySold) AS profit 
-    FROM sales s 
-    JOIN products p ON s.productId = p.id
-  ''');
+    // Query to get total revenue, total products sold, and total profit (sellingPrice(purchasePrice) - mrp(salePrice))
+    final result = await db.rawQuery(''' 
+      SELECT 
+        SUM(p.purchasePrice * s.quantitySold) AS totalValue, 
+        SUM(s.quantitySold) AS totalQuantity,
+        SUM((p.salePrice - p.purchasePrice) * s.quantitySold) AS profit 
+      FROM sales s 
+      JOIN products p ON s.productId = p.id
+    ''');
 
-  if (result.isNotEmpty) {
-    var data = result.first;
-
-    // Handle null values explicitly for each field
-    double totalValue = data['totalValue'] != null ? (data['totalValue'] as num).toDouble() : 0.0;
-    int totalQuantity = data['totalQuantity'] != null ? (data['totalQuantity'] as int) : 0;
-    double profit = data['profit'] != null ? (data['profit'] as num).toDouble() : 0.0;
-
-    return {
-      'totalValue': totalValue,
-      'totalQuantity': totalQuantity,
-      'profit': profit,
-    };
-  } else {
-    return {
-      'totalValue': 0.0,
-      'totalQuantity': 0,
-      'profit': 0.0,
-    };
+    if (result.isNotEmpty) {
+      return {
+        'totalValue': result.first['totalValue'],
+        'totalQuantity': result.first['totalQuantity'],
+        'profit': result.first['profit'],
+      };
+    } else {
+      return {
+        'totalValue': 0.0,
+        'totalQuantity': 0,
+        'profit': 0.0,
+      };
+    }
   }
-}
-
-
       //   name TEXT UNIQUE NOT NULL, 
       //   sellingPrice REAL NOT NULL, 
       //   mrp REAL NOT NULL, 
@@ -273,7 +264,7 @@ Future<List<String>> getProductNamesByQuery(String query) async {
 
 
   // Get top-selling products
-  Future<List<Map<String, dynamic>>> getTopSellingProducts(String dateRange) async {
+  Future<List<Map<String, dynamic>>> getTopSellingProducts() async {
     final db = await database;
     return await db.rawQuery('''
       SELECT p.name, SUM(s.quantitySold) AS totalSold
@@ -345,17 +336,14 @@ Future<List<String>> getProductNamesByQuery(String query) async {
 
 
   // Generate sales report
-// Modify getSalesReport to accept a date range filter
-Future<List<Map<String, dynamic>>> getSalesReport(String startDate, String endDate) async {
-  final db = await database;
-  return await db.rawQuery('''
-    SELECT p.name, s.quantitySold, s.saleDate
-    FROM sales s
-    JOIN products p ON s.productId = p.id
-    WHERE s.saleDate BETWEEN ? AND ?
-  ''', [startDate, endDate]);
-}
-
+  Future<List<Map<String, dynamic>>> getSalesReport() async {
+    final db = await database;
+    return await db.rawQuery('''
+      SELECT p.name, s.quantitySold, s.saleDate
+      FROM sales s
+      JOIN products p ON s.productId = p.id
+    ''');
+  }
 
   // User registration
   Future<void> registerUser(String username, String password) async {

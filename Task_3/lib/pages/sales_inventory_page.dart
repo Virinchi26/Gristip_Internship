@@ -63,6 +63,7 @@ class _SalesInventoryPageState extends State<SalesInventoryPage> {
     );
   }
 }
+
 // Future<void> addProduct(String barcode, int inStock, int regularPrice,
 //     int salePrice, int purchasePrice, String name) async {
 //   final db = await database;
@@ -96,7 +97,7 @@ class _AddProductPageState extends State<AddProductPage> {
 
   ScrollController _scrollController = ScrollController();
 
-    void getProductSuggestions(String query) async {
+  void getProductSuggestions(String query) async {
     if (query.isNotEmpty) {
       // Assuming dbHelper has a method `getProductNamesByQuery`
       List<String> products = await dbHelper.getProductNamesByQuery(query);
@@ -119,7 +120,8 @@ class _AddProductPageState extends State<AddProductPage> {
     final name = nameController.text.trim();
 
     try {
-      await dbHelper.addProduct(barcode, inStock, regularPrice, salePrice, purchasePrice, name);
+      await dbHelper.addProduct(
+          barcode, inStock, regularPrice, salePrice, purchasePrice, name);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Product added successfully.')),
       );
@@ -135,7 +137,8 @@ class _AddProductPageState extends State<AddProductPage> {
       );
     }
   }
-    // Reset the product name
+
+  // Reset the product name
   void resetProductName() {
     setState(() {
       nameController.clear(); // Clear the product name input
@@ -241,12 +244,13 @@ class SellProductPage extends StatefulWidget {
   @override
   _SellProductPageState createState() => _SellProductPageState();
 }
+
 class _SellProductPageState extends State<SellProductPage> {
   final TextEditingController nameController = TextEditingController();
   final TextEditingController quantityController = TextEditingController();
   final DatabaseHelper dbHelper = DatabaseHelper();
 
-  List <String> suggestions = [];
+  List<String> suggestions = [];
   ScrollController _scrollController = ScrollController();
 
   void getProductSuggestions(String query) async {
@@ -262,46 +266,45 @@ class _SellProductPageState extends State<SellProductPage> {
       });
     }
   }
-  
 
   void sellProduct(BuildContext context) async {
-  final name = nameController.text.trim();
-  final quantity = int.tryParse(quantityController.text) ?? 0;
+    final name = nameController.text.trim();
+    final quantity = int.tryParse(quantityController.text) ?? 0;
 
-  try {
-    final product = await dbHelper.getProductByName(name);
-    if (product != null) {
-      final productId = product['id'] as int;
-      final currentStock = product['inStock'] as int;
+    try {
+      final product = await dbHelper.getProductByName(name);
+      if (product != null) {
+        final productId = product['id'] as int;
+        final currentStock = product['inStock'] as int;
 
-      if (currentStock >= quantity) {
-        await dbHelper.insertSale(productId, quantity);
-        await dbHelper.updateProductStock(productId, currentStock - quantity);
+        if (currentStock >= quantity) {
+          await dbHelper.insertSale(productId, quantity);
+          await dbHelper.updateProductStock(productId, currentStock - quantity);
 
-        // Add the product to the cart
-        await dbHelper.addToCart(productId, quantity);
+          // Add the product to the cart
+          await dbHelper.addToCart(productId, quantity);
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Sale completed successfully.')),
-        );
-        nameController.clear();
-        quantityController.clear();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Sale completed successfully.')),
+          );
+          nameController.clear();
+          quantityController.clear();
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Not enough stock available.')),
+          );
+        }
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Not enough stock available.')),
+          SnackBar(content: Text('Product not found.')),
         );
       }
-    } else {
+    } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Product not found.')),
+        SnackBar(content: Text('Error during sale: $e')),
       );
     }
-  } catch (e) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Error during sale: $e')),
-    );
   }
-}
 
   // Reset the product name
   void resetProductName() {
@@ -392,109 +395,50 @@ class _SellProductPageState extends State<SellProductPage> {
   }
 }
 
-class SalesReportPage extends StatefulWidget {
-  @override
-  _SalesReportPageState createState() => _SalesReportPageState();
-}
-
-class _SalesReportPageState extends State<SalesReportPage> {
+class SalesReportPage extends StatelessWidget {
   final DatabaseHelper dbHelper = DatabaseHelper();
-  String selectedDateRange = 'Today'; // Default range
 
-  // Function to fetch sales report with the given date range
-  Future<List<Map<String, dynamic>>> fetchSalesReport(
-      String startDate, String endDate) async {
-    return await dbHelper.getSalesReport(startDate, endDate);
+  Future<List<Map<String, dynamic>>> fetchSalesReport() async {
+    return await dbHelper.getSalesReport();
   }
 
   @override
   Widget build(BuildContext context) {
-    // Get the current date to handle dynamic date ranges
-    DateTime now = DateTime.now();
-    String startDate = '', endDate = '';
-
-    switch (selectedDateRange) {
-      case 'Yesterday':
-        startDate =
-            DateTime(now.year, now.month, now.day - 1).toIso8601String();
-        endDate = DateTime(now.year, now.month, now.day).toIso8601String();
-        break;
-      case 'Last Month':
-        startDate = DateTime(now.year, now.month - 1, 1).toIso8601String();
-        endDate = DateTime(now.year, now.month, 1).toIso8601String();
-        break;
-      case 'Last Year':
-        startDate = DateTime(now.year - 1, 1, 1).toIso8601String();
-        endDate = DateTime(now.year, 1, 1).toIso8601String();
-        break;
-      default: // Today
-        startDate = DateTime(now.year, now.month, now.day).toIso8601String();
-        endDate = DateTime(now.year, now.month, now.day + 1).toIso8601String();
-        break;
-    }
-
     return Scaffold(
       appBar: AppBar(title: Text('Sales Report')),
-      body: Column(
-        children: [
-          // Date Range Filter
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: DropdownButton<String>(
-              value: selectedDateRange,
-              onChanged: (newValue) {
-                setState(() {
-                  selectedDateRange = newValue!;
-                });
+      body: FutureBuilder<List<Map<String, dynamic>>>(
+        future: fetchSalesReport(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return Center(child: CircularProgressIndicator());
+          } else if (snapshot.hasError) {
+            return Center(child: Text('Error: ${snapshot.error}'));
+          } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+            return Center(child: Text('No sales data available.'));
+          } else {
+            final sales = snapshot.data!;
+            return ListView.builder(
+              itemCount: sales.length,
+              itemBuilder: (context, index) {
+                final sale = sales[index];
+                return Card(
+                  margin: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                  child: ListTile(
+                    leading: Icon(Icons.receipt, color: Colors.blue),
+                    title: Text('Product: ${sale['name']}'),
+                    subtitle: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Quantity Sold: ${sale['quantitySold']}'),
+                        Text('Date: ${sale['saleDate']}'),
+                      ],
+                    ),
+                  ),
+                );
               },
-              items: ['Today', 'Yesterday', 'Last Month', 'Last Year']
-                  .map((range) => DropdownMenuItem<String>(
-                        value: range,
-                        child: Text(range),
-                      ))
-                  .toList(),
-            ),
-          ),
-
-          // Display sales report with selected date range
-          Expanded(
-            child: FutureBuilder<List<Map<String, dynamic>>>(
-              future: fetchSalesReport(startDate, endDate),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return Center(child: CircularProgressIndicator());
-                } else if (snapshot.hasError) {
-                  return Center(child: Text('Error: ${snapshot.error}'));
-                } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                  return Center(child: Text('No sales data available.'));
-                } else {
-                  final sales = snapshot.data!;
-                  return ListView.builder(
-                    itemCount: sales.length,
-                    itemBuilder: (context, index) {
-                      final sale = sales[index];
-                      return Card(
-                        margin:
-                            EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-                        child: ListTile(
-                          leading: Icon(Icons.receipt, color: Colors.blue),
-                          title: Text('Product: ${sale['name']}'),
-                          subtitle: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text('Quantity Sold: ${sale['quantitySold']}'),
-                              Text('Date: ${sale['saleDate']}'),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
-                  );
-                }
-              },
-            ),
-          ),
-        ],
+            );
+          }
+        },
       ),
     );
   }
