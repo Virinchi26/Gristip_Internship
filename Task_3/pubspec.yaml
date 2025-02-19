@@ -81,6 +81,8 @@ flutter:
     - assets/data/products.xlsx
     - assets/fonts/NotoSans-Regular.ttf
     - assets/fonts/NotoSans-Bold.ttf
+    - assets/fonts/Roboto-Bold.ttf
+    - assets/fonts/Roboto-Regular.ttf
     # - images/a_dot_ham.jpeg
 
   # An image asset can refer to one or more resolution-specific "variants", see
