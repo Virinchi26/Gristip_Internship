@@ -402,9 +402,11 @@ class ProductPreviewPage extends StatelessWidget {
     for (var row in excelData) {
       Map<String, dynamic> mappedProduct = {};
       if (manualMapping) {
-        for (int i = 0; i < columnMapping.length; i++) {
-          String column = columnMapping[i] ?? dbColumns[i];
-          mappedProduct[column] = row[columnMapping[i]] ?? row[dbColumns[i]];
+        for (int i = 0; i < dbColumns.length; i++) {
+          String? excelColumn = columnMapping[i];
+          if (excelColumn != null) {
+            mappedProduct[dbColumns[i]] = row[excelColumn];
+          }
         }
       } else {
         mappedProduct = row;
