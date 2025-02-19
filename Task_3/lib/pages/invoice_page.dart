@@ -38,7 +38,7 @@ class _InvoicePageState extends State<InvoicePage> {
     });
   }
 
-  Future<void> generateInvoice(BuildContext context) async {
+Future<void> generateInvoice(BuildContext context) async {
     if (cartItems.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -66,20 +66,75 @@ class _InvoicePageState extends State<InvoicePage> {
                 pw.SizedBox(height: 20),
                 pw.Text('Items:', style: pw.TextStyle(fontSize: 18)),
                 pw.SizedBox(height: 10),
-                ...cartItems.map((item) {
-                  return pw.Row(
-                    mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                    children: [
-                      pw.Text(item['name']),
-                      pw.Text('x${item['quantity']}'),
-                      pw.Text(
-                          'Rs. ${(item['salePrice'] as int) * (item['quantity'] as int)}'),
-                    ],
-                  );
-                }).toList(),
+
+                // Create a table for cart items
+                pw.Table(
+                  columnWidths: {
+                    0: pw.FlexColumnWidth(3), // Product Name column
+                    1: pw.FlexColumnWidth(1), // Quantity column
+                    2: pw.FlexColumnWidth(1), // Price column
+                    3: pw.FlexColumnWidth(1), // Total column
+                  },
+                  border: pw.TableBorder.all(),
+                  children: [
+                    // Table Header Row
+                    pw.TableRow(children: [
+                      pw.Padding(
+                        padding: const pw.EdgeInsets.all(8.0),
+                        child: pw.Text('Product Name',
+                            style:
+                                pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                      ),
+                      pw.Padding(
+                        padding: const pw.EdgeInsets.all(8.0),
+                        child: pw.Text('Quantity',
+                            style:
+                                pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                      ),
+                      pw.Padding(
+                        padding: const pw.EdgeInsets.all(8.0),
+                        child: pw.Text('Price',
+                            style:
+                                pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                      ),
+                      pw.Padding(
+                        padding: const pw.EdgeInsets.all(8.0),
+                        child: pw.Text('Total',
+                            style:
+                                pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                      ),
+                    ]),
+
+                    // Table rows for each cart item
+                    ...cartItems.map((item) {
+                      return pw.TableRow(children: [
+                        pw.Padding(
+                          padding: const pw.EdgeInsets.all(8.0),
+                          child: pw.Text(item['name']),
+                        ),
+                        pw.Padding(
+                          padding: const pw.EdgeInsets.all(8.0),
+                          child: pw.Text('${item['quantity']}'),
+                        ),
+                        pw.Padding(
+                          padding: const pw.EdgeInsets.all(8.0),
+                          child: pw.Text('Rs. ${item['salePrice']}'),
+                        ),
+                        pw.Padding(
+                          padding: const pw.EdgeInsets.all(8.0),
+                          child: pw.Text(
+                              'Rs. ${(item['salePrice']) * (item['quantity'])}'),
+                        ),
+                      ]);
+                    }).toList(),
+                  ],
+                ),
+
                 pw.SizedBox(height: 20),
                 pw.Divider(),
                 pw.SizedBox(height: 10),
+
+                // Total row
                 pw.Row(
                   mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                   children: [
@@ -184,7 +239,7 @@ class _InvoicePageState extends State<InvoicePage> {
                               ],
                             ),
                             trailing: Text(
-                              'Total: Rs. ${(item['salePrice'] as int) * (item['quantity'] as int)}',
+                              'Total: Rs. ${(item['salePrice']) * (item['quantity'])}',
                               style: TextStyle(fontWeight: FontWeight.bold),
                             ),
                           ),
