@@ -87,33 +87,56 @@ class DatabaseHelper {
   }
   // Get business overview
   // Get business overview - Adjusted to new profit calculation (sellingPrice(purchasePrice) - mrp(salePrice))
-  Future<Map<String, dynamic>> getBusinessOverview() async {
-    final db = await database;
+  Future<Map<String, dynamic>> getBusinessOverview(String dateRange) async {
+  final db = await database;
+  DateTime now = DateTime.now();
+  DateTime startDate, endDate;
 
-    // Query to get total revenue, total products sold, and total profit (sellingPrice(purchasePrice) - mrp(salePrice))
-    final result = await db.rawQuery(''' 
-      SELECT 
-        SUM(p.purchasePrice * s.quantitySold) AS totalValue, 
-        SUM(s.quantitySold) AS totalQuantity,
-        SUM((p.salePrice - p.purchasePrice) * s.quantitySold) AS profit 
-      FROM sales s 
-      JOIN products p ON s.productId = p.id
-    ''');
-
-    if (result.isNotEmpty) {
-      return {
-        'totalValue': result.first['totalValue'],
-        'totalQuantity': result.first['totalQuantity'],
-        'profit': result.first['profit'],
-      };
-    } else {
-      return {
-        'totalValue': 0.0,
-        'totalQuantity': 0,
-        'profit': 0.0,
-      };
-    }
+  // Determine start and end dates based on filter
+  if (dateRange == "Today") {
+    startDate = DateTime(now.year, now.month, now.day);
+    endDate = startDate.add(Duration(days: 1)); 
+  } else if (dateRange == "Last Week") {
+    startDate = now.subtract(Duration(days: now.weekday + 6)); // Start of last week (Monday)
+    endDate = startDate.add(Duration(days: 6)); 
+  } else if (dateRange == "Last Month") {
+    startDate = DateTime(now.year, now.month - 1, 1); 
+    endDate = DateTime(now.year, now.month, 1).subtract(Duration(days: 1)); 
+  } else if (dateRange == "Last Year") {
+    startDate = DateTime(now.year - 1, 1, 1); 
+    endDate = DateTime(now.year - 1, 12, 31); 
+  } else {
+    startDate = DateTime(2000, 1, 1); 
+    endDate = now;
   }
+
+  // Convert to ISO format for SQLite date comparison
+  String start = startDate.toIso8601String().substring(0, 10);
+  String end = endDate.toIso8601String().substring(0, 10);
+
+  // Query with correct date filtering
+  final result = await db.rawQuery(''' 
+    SELECT 
+      SUM(p.purchasePrice * s.quantitySold) AS totalValue, 
+      SUM(s.quantitySold) AS totalQuantity,
+      SUM((p.salePrice - p.purchasePrice) * s.quantitySold) AS profit 
+    FROM sales s 
+    JOIN products p ON s.productId = p.id
+    WHERE DATE(s.saleDate) BETWEEN DATE(?) AND DATE(?)
+  ''', [start, end]);
+
+  // Print debug logs
+  print("Selected date range: $dateRange");
+  print("SQL Query Condition: BETWEEN DATE('$start') AND DATE('$end')");
+  print("Query Result: $result");
+
+  // Return business overview data
+  return {
+    'totalValue': result.isNotEmpty ? (result.first['totalValue'] as num?)?.toDouble() ?? 0.0 : 0.0,
+    'totalQuantity': result.isNotEmpty ? (result.first['totalQuantity'] as num?)?.toInt() ?? 0 : 0,
+    'profit': result.isNotEmpty ? (result.first['profit'] as num?)?.toDouble() ?? 0.0 : 0.0,
+  };
+}
       //   name TEXT UNIQUE NOT NULL, 
       //   sellingPrice REAL NOT NULL, 
       //   mrp REAL NOT NULL, 

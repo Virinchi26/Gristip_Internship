@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:myapp/db_helper.dart';
 
 class BusinessOverviewPage extends StatefulWidget {
-  const BusinessOverviewPage({super.key});
-
   @override
   _BusinessOverviewPageState createState() => _BusinessOverviewPageState();
 }
@@ -15,9 +13,9 @@ class _BusinessOverviewPageState extends State<BusinessOverviewPage>
   int totalProductsSold = 0;
   double totalProfit = 0.0;
   List<Map<String, dynamic>> topSellingProducts = [];
-  List<Map<String, dynamic>> lowStockProducts = [];
   List<Map<String, dynamic>> remainingStock = [];
-
+  List<Map<String, dynamic>> lowStockProducts = [];
+  String selectedFilter = "Today";
   late TabController _tabController;
 
   @override
@@ -25,23 +23,26 @@ class _BusinessOverviewPageState extends State<BusinessOverviewPage>
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
     fetchBusinessData();
+
+    _tabController.addListener(() {
+      setState(() {});
+    });
   }
 
   Future<void> fetchBusinessData() async {
     try {
-      final data = await dbHelper.getBusinessOverview();
+      final data = await dbHelper.getBusinessOverview(selectedFilter);
       final topSelling = await dbHelper.getTopSellingProducts();
-      final lowStock =
-          await dbHelper.getLowStockProducts(10); // Low stock threshold is 10
       final stock = await dbHelper.getRemainingStock();
+      final lowStock = await dbHelper.getLowStockProducts(10);
 
       setState(() {
-        totalRevenue = (data['totalValue'] ?? 0.0).toDouble();
-        totalProductsSold = data['totalQuantity'] ?? 0;
-        totalProfit = (data['profit'] ?? 0.0).toDouble();
+        totalRevenue = (data['totalValue'] ?? 0).toDouble();
+        totalProductsSold = (data['totalQuantity'] ?? 0).toInt();
+        totalProfit = (data['profit'] ?? 0).toDouble();
         topSellingProducts = topSelling;
-        lowStockProducts = lowStock;
         remainingStock = stock;
+        lowStockProducts = lowStock;
       });
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -64,144 +65,142 @@ class _BusinessOverviewPageState extends State<BusinessOverviewPage>
           ],
         ),
       ),
-      body: TabBarView(
-        controller: _tabController,
+      body: Column(
         children: [
-          // Overview Tab
-          SingleChildScrollView(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          if (_tabController.index == 0)
+            Padding(
+              padding: EdgeInsets.all(12.0),
+              child: Container(
+                padding: EdgeInsets.symmetric(horizontal: 16.0),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12.0),
+                  border: Border.all(color: Colors.grey.shade300),
+                ),
+                child: DropdownButton<String>(
+                  isExpanded: true,
+                  value: selectedFilter,
+                  onChanged: (newValue) {
+                    if (newValue != null) {
+                      setState(() {
+                        selectedFilter = newValue;
+                      });
+                      fetchBusinessData();
+                    }
+                  },
+                  underline: SizedBox(),
+                  items: ["Today", "Last Week", "Last Month", "Last Year"]
+                      .map<DropdownMenuItem<String>>((String value) {
+                    return DropdownMenuItem<String>(
+                      value: value,
+                      child: Text(value, style: TextStyle(fontSize: 16)),
+                    );
+                  }).toList(),
+                ),
+              ),
+            ),
+          Expanded(
+            child: TabBarView(
+              controller: _tabController,
               children: [
-                Text(
-                  'Today\'s Business Overview',
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.blueAccent,
-                  ),
-                ),
-                SizedBox(height: 16),
-                Card(
-                  elevation: 4,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: ListTile(
-                    title: Text(
-                      'Total Revenue',
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    subtitle: Text(
-                      '₹${totalRevenue.toStringAsFixed(2)}',
-                      style: TextStyle(fontSize: 18),
-                    ),
-                  ),
-                ),
-                SizedBox(height: 16),
-                Card(
-                  elevation: 4,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: ListTile(
-                    title: Text(
-                      'Total Products Sold',
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    subtitle: Text(
-                      '$totalProductsSold',
-                      style: TextStyle(fontSize: 18),
-                    ),
-                  ),
-                ),
-                SizedBox(height: 16),
-                Card(
-                  elevation: 4,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: ListTile(
-                    title: Text(
-                      'Total Profit',
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    subtitle: Text(
-                      '₹${totalProfit.toStringAsFixed(2)}',
-                      style: TextStyle(fontSize: 18),
-                    ),
-                  ),
-                ),
+                _buildOverviewTab(),
+                _buildProductPerformanceTab(),
+                _buildStockInsightsTab(),
               ],
             ),
           ),
-
-          // Product Performance Tab
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: ListView.builder(
-              itemCount: topSellingProducts.length + lowStockProducts.length,
-              itemBuilder: (context, index) {
-                if (index < topSellingProducts.length) {
-                  final product = topSellingProducts[index];
-                  return Card(
-                    margin: EdgeInsets.symmetric(vertical: 8.0),
-                    elevation: 4,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: ListTile(
-                      contentPadding: EdgeInsets.symmetric(horizontal: 8.0),
-                      leading: Icon(Icons.trending_up, color: Colors.green),
-                      title: Text('${product['name']}'),
-                      subtitle: Text('Sold: ${product['totalSold']}'),
-                    ),
-                  );
-                } else {
-                  final product =
-                      lowStockProducts[index - topSellingProducts.length];
-                  return Card(
-                    margin: EdgeInsets.symmetric(vertical: 8.0),
-                    elevation: 4,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: ListTile(
-                      contentPadding: EdgeInsets.symmetric(horizontal: 8.0),
-                      leading: Icon(Icons.warning, color: Colors.orange),
-                      title: Text('${product['name']}'),
-                      subtitle: Text('Remaining Stock: ${product['inStock']}'),
-                    ),
-                  );
-                }
-              },
-            ),
-          ),
-
-          // Stock Insights Tab
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: ListView.builder(
-              itemCount: remainingStock.length,
-              itemBuilder: (context, index) {
-                final product = remainingStock[index];
-                return Card(
-                  margin: EdgeInsets.symmetric(vertical: 8.0),
-                  elevation: 4,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: ListTile(
-                    contentPadding: EdgeInsets.symmetric(horizontal: 8.0),
-                    leading: Icon(Icons.inventory, color: Colors.blue),
-                    title: Text('${product['name']}'),
-                    subtitle: Text('Remaining Stock: ${product['inStock']}'),
-                  ),
-                );
-              },
-            ),
-          ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildOverviewTab() {
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: ListView(
+        children: [
+          _buildOverviewCard('Total Revenue',
+              '₹${totalRevenue.toStringAsFixed(2)}', Icons.monetization_on),
+          _buildOverviewCard(
+              'Total Products Sold', '$totalProductsSold', Icons.shopping_cart),
+          _buildOverviewCard('Total Profit',
+              '₹${totalProfit.toStringAsFixed(2)}', Icons.attach_money),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProductPerformanceTab() {
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: ListView(
+        children: topSellingProducts
+            .map((product) => Card(
+                  elevation: 3,
+                  margin: EdgeInsets.symmetric(vertical: 8),
+                  child: ListTile(
+                    leading: Icon(Icons.star, color: Colors.orange),
+                    title: Text(product['name'],
+                        style: TextStyle(fontWeight: FontWeight.bold)),
+                    subtitle: Text('Sold: ${product['totalSold']}'),
+                  ),
+                ))
+            .toList(),
+      ),
+    );
+  }
+
+  Widget _buildStockInsightsTab() {
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: ListView(
+        children: [
+          Text('Remaining Stock',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          ...remainingStock.map((product) => Card(
+                elevation: 3,
+                margin: EdgeInsets.symmetric(vertical: 8),
+                child: ListTile(
+                  leading: Icon(Icons.store, color: Colors.green),
+                  title: Text(product['name'],
+                      style: TextStyle(fontWeight: FontWeight.bold)),
+                  subtitle: Text('Stock: ${product['inStock']}'),
+                ),
+              )),
+          SizedBox(height: 16),
+          Text('Low Stock Products',
+              style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.red)),
+          ...lowStockProducts.map((product) => Card(
+                elevation: 3,
+                margin: EdgeInsets.symmetric(vertical: 8),
+                child: ListTile(
+                  leading: Icon(Icons.warning, color: Colors.red),
+                  title: Text(product['name'],
+                      style: TextStyle(fontWeight: FontWeight.bold)),
+                  subtitle: Text('Stock: ${product['inStock']}'),
+                ),
+              )),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildOverviewCard(String title, String value, IconData icon) {
+    return Card(
+      elevation: 4,
+      margin: EdgeInsets.symmetric(vertical: 8),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: ListTile(
+        leading: Icon(icon, size: 32, color: Colors.blueAccent),
+        title: Text(title,
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+        subtitle:
+            Text(value, style: TextStyle(fontSize: 18, color: Colors.black87)),
       ),
     );
   }
