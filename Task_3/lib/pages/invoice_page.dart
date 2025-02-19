@@ -29,7 +29,7 @@ class _InvoicePageState extends State<InvoicePage> {
         await dbHelper.getCartItems(); // Retrieve cart items from the database
     double total = 0.0;
     for (var item in items) {
-      total += (item['salePrice'] as int) * (item['quantity'] as int);
+      total += (item['salePrice'] as int ) * (item['quantity'] as int);
     }
     setState(() {
       cartItems =
