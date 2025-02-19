@@ -4,7 +4,7 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:path_provider/path_provider.dart';
 import 'dart:io';
-import 'package:flutter/services.dart'; // Required to load fonts
+import 'package:open_file/open_file.dart';
 
 class InvoicePage extends StatefulWidget {
   const InvoicePage({super.key});
@@ -17,26 +17,11 @@ class _InvoicePageState extends State<InvoicePage> {
   final DatabaseHelper dbHelper = DatabaseHelper();
   List<Map<String, dynamic>> cartItems = [];
   double totalAmount = 0.0;
-  pw.Font? regularFont;
-  pw.Font? boldFont;
 
   @override
   void initState() {
     super.initState();
     fetchCartItems();
-    loadFonts(); // Load custom fonts
-  }
-
-  Future<void> loadFonts() async {
-    // Load the custom fonts
-    final fontRegular =
-        await rootBundle.load('assets/fonts/NotoSans-Regular.ttf');
-    final fontBold = await rootBundle.load('assets/fonts/NotoSans-Bold.ttf');
-
-    setState(() {
-      regularFont = pw.Font.ttf(fontRegular);
-      boldFont = pw.Font.ttf(fontBold);
-    });
   }
 
   Future<void> fetchCartItems() async {
@@ -63,14 +48,6 @@ class _InvoicePageState extends State<InvoicePage> {
     }
 
     try {
-      // Ensure fonts are loaded
-      if (regularFont == null || boldFont == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Fonts are still loading. Try again.')),
-        );
-        return;
-      }
-
       // Create PDF document
       final pdf = pw.Document();
 
@@ -84,9 +61,7 @@ class _InvoicePageState extends State<InvoicePage> {
                 pw.Text(
                   'Invoice',
                   style: pw.TextStyle(
-                      fontSize: 24,
-                      fontWeight: pw.FontWeight.bold,
-                      font: boldFont),
+                      fontSize: 24, fontWeight: pw.FontWeight.bold),
                 ),
                 pw.SizedBox(height: 20),
                 pw.Text('Items:', style: pw.TextStyle(fontSize: 18)),
@@ -95,11 +70,10 @@ class _InvoicePageState extends State<InvoicePage> {
                   return pw.Row(
                     mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                     children: [
-                      pw.Text(item['name'], style: pw.TextStyle(font: regularFont)),
-                      pw.Text('x${item['quantity']}', style: pw.TextStyle(font: regularFont)),
+                      pw.Text(item['name']),
+                      pw.Text('x${item['quantity']}'),
                       pw.Text(
-                          '₹${(item['salePrice'] as int) * (item['quantity'] as int)}',
-                          style: pw.TextStyle(font: regularFont)),
+                          'Rs. ${(item['salePrice'] as int) * (item['quantity'] as int)}'),
                     ],
                   );
                 }).toList(),
@@ -110,11 +84,9 @@ class _InvoicePageState extends State<InvoicePage> {
                   mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                   children: [
                     pw.Text('Total Amount:',
-                        style: pw.TextStyle(
-                            fontWeight: pw.FontWeight.bold, font: boldFont)),
-                    pw.Text('\$${totalAmount.toStringAsFixed(2)}',
-                        style: pw.TextStyle(
-                            fontWeight: pw.FontWeight.bold, font: boldFont)),
+                        style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                    pw.Text('Rs. ${totalAmount.toStringAsFixed(2)}',
+                        style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
                   ],
                 ),
               ],
@@ -135,6 +107,10 @@ class _InvoicePageState extends State<InvoicePage> {
             label: 'Open',
             onPressed: () {
               // Code to open the generated PDF
+              openInvoice(file.path);
+
+              // Clear the cart after the invoice is downloaded
+              clearCart();
             },
           ),
         ),
@@ -144,6 +120,29 @@ class _InvoicePageState extends State<InvoicePage> {
         SnackBar(content: Text('Failed to generate invoice.')),
       );
     }
+  }
+
+  // Open the generated PDF using open_file
+  Future<void> openInvoice(String filePath) async {
+    final result = await OpenFile.open(filePath);
+    if (result.type != ResultType.done) {
+      // If unable to open the file, show an error message
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to open the PDF.')),
+      );
+    }
+  }
+
+  // Method to clear the cart items
+  Future<void> clearCart() async {
+    // Clear the cart from the database
+    await dbHelper.clearCart();
+
+    // Update the local state to clear the cart items
+    setState(() {
+      cartItems.clear();
+      totalAmount = 0.0; // Reset total amount
+    });
   }
 
   @override
@@ -181,11 +180,11 @@ class _InvoicePageState extends State<InvoicePage> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text('Quantity: ${item['quantity']}'),
-                                Text('Price: ₹${item['salePrice']}'),
+                                Text('Price: Rs. ${item['salePrice']}'),
                               ],
                             ),
                             trailing: Text(
-                              'Total: ₹${(item['salePrice'] as int) * (item['quantity'] as int)}',
+                              'Total: Rs. ${(item['salePrice'] as int) * (item['quantity'] as int)}',
                               style: TextStyle(fontWeight: FontWeight.bold),
                             ),
                           ),
@@ -202,7 +201,7 @@ class _InvoicePageState extends State<InvoicePage> {
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 Text(
-                  '₹${totalAmount.toStringAsFixed(2)}',
+                  'Rs. ${totalAmount.toStringAsFixed(2)}',
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
               ],
