@@ -7,6 +7,7 @@ import 'pages/sales_inventory_page.dart';
 import 'pages/invoice_page.dart';
 import 'pages/barcode_scanner_page.dart';
 import 'pages/business_overview_page.dart';
+import 'pages/point_of_sale_page.dart';
 void main() {
   runApp(const MyApp());
 }
@@ -30,6 +31,7 @@ class MyApp extends StatelessWidget {
         '/invoice': (context) => InvoicePage(),
         '/barcode_scanner': (context) =>  BarcodeScannerPage(),
         '/business_overview': (context) => BusinessOverviewPage(),
+        '/point_of_sale': (context) => PointOfSalePage(),
       },
     );
   }

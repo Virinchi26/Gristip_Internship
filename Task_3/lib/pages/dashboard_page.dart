@@ -52,6 +52,13 @@ class DashboardPage extends StatelessWidget {
                 Navigator.pushNamed(context, '/business_overview');
               },
             ),
+            BlockTile(
+              icon: Icons.money,
+              label: 'Point of Sale',
+              onTap: () {
+                Navigator.pushNamed(context, '/point_of_sale');
+              },
+            ),
           ],
         ),
       ),
