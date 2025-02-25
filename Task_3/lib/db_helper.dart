@@ -84,7 +84,33 @@ class DatabaseHelper {
 
 
     // Additional table creation logic if required
+     await db.execute('''
+      CREATE TABLE transactions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        customerName TEXT NOT NULL,
+        customerPhone TEXT NOT NULL,
+        totalAmount REAL NOT NULL,
+        paymentMethod TEXT NOT NULL,
+        transactionDate TEXT NOT NULL
+      );
+    ''');
+    await db.execute('''
+      CREATE TABLE transaction_items (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        transactionId INTEGER NOT NULL,
+        productId INTEGER NOT NULL,
+        quantity INTEGER NOT NULL,
+        salePrice REAL NOT NULL,
+        discount REAL NOT NULL,
+        tax REAL NOT NULL,
+        subtotal REAL NOT NULL,
+        FOREIGN KEY (transactionId) REFERENCES transactions (id)
+      );
+    ''');
   }
+
+
+  
   // Get business overview
   // Get business overview - Adjusted to new profit calculation (sellingPrice(purchasePrice) - mrp(salePrice))
   Future<Map<String, dynamic>> getBusinessOverview(String dateRange) async {
@@ -518,5 +544,15 @@ Future<List<String>> getProductNamesByQuery(String query) async {
   Future<List<Map<String, dynamic>>> getInvoices() async {
     final db = await database;
     return await db.query('invoices');
+  }
+
+  Future<int> insertTransaction(Map<String, dynamic> transaction) async {
+    final db = await database;
+    return await db.insert('transactions', transaction);
+  }
+
+  Future<int> insertTransactionItem(Map<String, dynamic> transactionItem) async {
+    final db = await database;
+    return await db.insert('transaction_items', transactionItem);
   }
 }

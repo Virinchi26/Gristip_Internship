@@ -49,6 +49,7 @@ dependencies:
   permission_handler: ^11.3.1
   barcode_scan2: ^4.4.0
   open_file: ^3.5.10
+  flutter_pdfview: ^1.4.0
   # flutter_barcode_scanner: ^2.0.0
   # barcode_scan2: ^4.4.0
   # qr_code_scanner_plus: ^2.0.8+1

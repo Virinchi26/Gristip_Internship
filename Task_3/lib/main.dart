@@ -31,7 +31,7 @@ class MyApp extends StatelessWidget {
         '/invoice': (context) => InvoicePage(),
         '/barcode_scanner': (context) =>  BarcodeScannerPage(),
         '/business_overview': (context) => BusinessOverviewPage(),
-        '/point_of_sale': (context) => PointOfSalePage(),
+        '/point_of_sale': (context) => POSPage(),
       },
     );
   }

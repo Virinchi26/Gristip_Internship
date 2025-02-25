@@ -1,218 +1,339 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:barcode_scan2/barcode_scan2.dart';
+import 'package:myapp/db_helper.dart';
+import 'dart:async';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
 
-
-class PointOfSalePage extends StatefulWidget {
-  const PointOfSalePage({super.key});
+class POSPage extends StatefulWidget {
+  const POSPage({super.key});
 
   @override
-  _PointOfSalePageState createState() => _PointOfSalePageState();
+  _POSPageState createState() => _POSPageState();
 }
 
-class _PointOfSalePageState extends State<PointOfSalePage> {
-  List<Product> cartItems = [];
-  double totalAmount = 0.0;
-  double discount = 0.0;
-  double tax = 0.18; // Example: GST Tax (18%)
-  String paymentMethod = 'Cash';
-  TextEditingController barcodeController = TextEditingController();
+class _POSPageState extends State<POSPage> {
+  final TextEditingController customerNameController = TextEditingController();
+  final TextEditingController customerPhoneController = TextEditingController();
+  final TextEditingController productSearchController = TextEditingController();
 
-  // Dummy Product Data
-  List<Product> products = [
-    Product(id: '1', name: 'Product A', price: 100.0),
-    Product(id: '2', name: 'Product B', price: 200.0),
-    Product(id: '3', name: 'Product C', price: 300.0),
-  ];
+  List<Map<String, dynamic>> cart = [];
+  String paymentMethod = "Cash"; // Default payment method
+  Map<String, dynamic>? lastInvoice;
+  List<Map<String, dynamic>> filteredProducts = [];
+  List<Map<String, dynamic>> productList = [];
+
+  FocusNode productSearchFocusNode = FocusNode();
+  bool showSuggestions = false; // Flag to control suggestion visibility
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('POS System'),
-        actions: [
-          IconButton(
-            icon: Icon(Icons.shopping_cart),
-            onPressed: () {
-              showDialog(
-                context: context,
-                builder: (_) => AlertDialog(
-                  title: Text('Cart'),
-                  content: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: cartItems.map((item) {
-                      return ListTile(
-                        title: Text(item.name),
-                        subtitle: Text('Price: ₹${item.price}'),
-                      );
-                    }).toList(),
-                  ),
-                  actions: [
-                    TextButton(
-                      child: Text('Checkout'),
-                      onPressed: _checkout,
-                    ),
-                  ],
-                ),
-              );
-            },
-          )
-        ],
-      ),
-      body: Padding(
+  void initState() {
+    super.initState();
+    _fetchProducts();
+
+    productSearchFocusNode.addListener(() {
+      if (productSearchFocusNode.hasFocus) {
+        setState(() {
+          showSuggestions = true;
+        });
+      } else {
+        setState(() {
+          showSuggestions = false;
+        });
+      }
+    });
+  }
+    // Handle the "Complete Sale" button action
+  void completeSale() {
+    setState(() {
+      // Reset cart and customer fields
+      cart.clear();
+      customerNameController.clear();
+      customerPhoneController.clear();
+      productSearchController.clear();
+      filteredProducts = List<Map<String, dynamic>>.from(
+          productList); // Reset product list view
+    });
+
+    // You can also trigger invoice PDF generation after the sale is completed.
+    printInvoice(); // This will generate and print the invoice
+  }
+
+  Future<void> _fetchProducts() async {
+    List<Map<String, dynamic>> products = await DatabaseHelper().getRemainingStock();
+    setState(() {
+      productList = List<Map<String, dynamic>>.from(products);
+      filteredProducts = List<Map<String, dynamic>>.from(products); // Initially show all products
+    });
+  }
+
+  void filterProducts(String query) {
+    setState(() {
+      filteredProducts = productList
+          .where((product) =>
+              product["barcode"].contains(query) ||
+              product["name"].toLowerCase().contains(query.toLowerCase()))
+          .toList();
+    });
+  }
+
+  void addProductToCart(Map<String, dynamic> product) {
+    setState(() {
+      cart.add({
+        "srNo": cart.length + 1,
+        "name": product["name"],
+        "barcode": product["barcode"],
+        "quantity": 1,
+        "price": product["salePrice"],
+        "discount": 0.0,
+        "tax": 0.0,
+      });
+      productSearchController.clear();
+      filteredProducts.clear();
+    });
+  }
+
+  double calculateSubtotal(Map<String, dynamic> item) {
+    return (item["price"] * item["quantity"]) - item["discount"] + (item["price"] * item["tax"] / 100);
+  }
+
+  double calculateTotal() {
+    return cart.fold(0.0, (sum, item) => sum + calculateSubtotal(item));
+  }
+
+  void removeCartItem(int index) {
+    setState(() {
+      cart.removeAt(index);
+    });
+  }
+
+  void editCartItem(int index) {
+    Map<String, dynamic> item = cart[index];
+    TextEditingController quantityController =
+        TextEditingController(text: item["quantity"].toString());
+    TextEditingController discountController =
+        TextEditingController(text: item["discount"].toString());
+    TextEditingController taxController =
+        TextEditingController(text: item["tax"].toString());
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text("Edit Item"),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: quantityController,
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(labelText: "Quantity"),
+              ),
+              TextField(
+                controller: discountController,
+                keyboardType: TextInputType.numberWithOptions(decimal: true),
+                decoration: InputDecoration(labelText: "Discount"),
+              ),
+              TextField(
+                controller: taxController,
+                keyboardType: TextInputType.numberWithOptions(decimal: true),
+                decoration: InputDecoration(labelText: "Tax (%)"),
+              ),
+            ],
+          ),
+          actions: [
+            ElevatedButton(
+              onPressed: () {
+                setState(() {
+                  cart[index]["quantity"] = int.parse(quantityController.text);
+                  cart[index]["discount"] = double.parse(discountController.text);
+                  cart[index]["tax"] = double.parse(taxController.text);
+                });
+                Navigator.pop(context);
+              },
+              child: Text("Save"),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child: Text("Cancel"),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // Print invoice function
+  Future<void> printInvoice() async {
+    final pdf = pw.Document();
+    pdf.addPage(pw.Page(
+      build: (pw.Context context) {
+        return pw.Column(
+          children: [
+            pw.Text("Customer: ${customerNameController.text}"),
+            pw.Text("Phone: ${customerPhoneController.text}"),
+            pw.Text("Payment Method: $paymentMethod"),
+            pw.Text("Invoice:"),
+            pw.Table.fromTextArray(
+              headers: ["Sr. No", "Product Name", "Qty", "Price", "Total"],
+              data: cart.map((item) {
+                return [
+                  item["srNo"],
+                  item["name"],
+                  item["quantity"],
+                  item["price"],
+                  calculateSubtotal(item),
+                ];
+              }).toList(),
+            ),
+            pw.Text("Total: Rs. ${calculateTotal().toStringAsFixed(2)}"),
+          ],
+        );
+      },
+    ));
+    // Print or save the PDF here
+    
+  }
+  @override
+Widget build(BuildContext context) {
+  return Scaffold(
+    appBar: AppBar(title: Text("POS System")),
+    body: SingleChildScrollView( // Wrap the entire body in a scrollable view
+      child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
-            // Barcode scanner input
+            // Customer Name and Phone Fields (Required)
             TextField(
-              controller: barcodeController,
-              keyboardType: TextInputType.number,
-              decoration: InputDecoration(
-                labelText: 'Scan Barcode or Enter Product ID',
-                suffixIcon: IconButton(
-                  icon: Icon(Icons.camera_alt),
-                  onPressed: _scanBarcode,
+              controller: customerNameController,
+              decoration: InputDecoration(labelText: "Customer Name"),
+            ),
+            TextField(
+              controller: customerPhoneController,
+              decoration: InputDecoration(labelText: "Customer Phone"),
+            ),
+            
+            // Product Search Field
+            TextField(
+              controller: productSearchController,
+              focusNode: productSearchFocusNode,
+              decoration:
+                  InputDecoration(labelText: "Scan Barcode / Search Product"),
+              onChanged: (query) => filterProducts(query),
+            ),            
+            // Product Suggestions
+            if (showSuggestions && filteredProducts.isNotEmpty)
+              SizedBox(
+                height: 150,
+                child: ListView.builder(
+                  itemCount: filteredProducts.length,
+                  itemBuilder: (context, index) {
+                    return ListTile(
+                      title: Text(filteredProducts[index]["name"]),
+                      onTap: () => addProductToCart(filteredProducts[index]),
+                    );
+                  },
                 ),
               ),
-            ),
-            SizedBox(height: 16.0),
-            ElevatedButton(
-              child: Text('Add Product to Cart'),
-              onPressed: _addProductToCart,
-            ),
-            SizedBox(height: 16.0),
-            // Payment details
-            TextField(
-              decoration: InputDecoration(
-                labelText: 'Discount (%)',
-              ),
-              keyboardType: TextInputType.number,
-              onChanged: (value) {
-                setState(() {
-                  discount = double.tryParse(value) ?? 0.0;
-                });
-              },
-            ),
-            SizedBox(height: 16.0),
-            DropdownButton<String>(
-              value: paymentMethod,
-              onChanged: (String? newValue) {
-                setState(() {
-                  paymentMethod = newValue!;
-                });
-              },
-              items: ['Cash', 'Card', 'UPI']
-                  .map<DropdownMenuItem<String>>((String value) {
-                return DropdownMenuItem<String>(
-                  value: value,
-                  child: Text(value),
+            
+            // Cart Items List
+            ListView.builder(
+              shrinkWrap: true, // This prevents the overflow by making the list's height fit the content
+              itemCount: cart.length,
+              itemBuilder: (context, index) {
+                var item = cart[index];
+                return Card(
+                  margin: EdgeInsets.symmetric(vertical: 8.0),
+                  child: Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                    "Customer: ${customerNameController.text}"),
+                                Text(
+                                    "Phone: ${customerPhoneController.text}"),
+                              Text("Product Name: ${item["name"]}"),
+                              Text("Qty: ${item["quantity"]}"),
+                              Text("Sale Price: Rs. ${item["price"]}"),
+                              Text("Discount: Rs. ${item["discount"]}"),
+                              Text("Tax: ${item["tax"]}%"),
+                              Text("Subtotal: Rs. ${calculateSubtotal(item)}"),
+                            ],
+                          ),
+                        ),
+                        Row(
+                          children: [
+                            IconButton(
+                              icon: Icon(Icons.edit),
+                              onPressed: () => editCartItem(index),
+                            ),
+                            IconButton(
+                              icon: Icon(Icons.delete),
+                              onPressed: () => removeCartItem(index),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
                 );
-              }).toList(),
+              },
             ),
-            SizedBox(height: 16.0),
-            ElevatedButton(
-              onPressed: _completeTransaction,
-              child: Text('Complete Transaction'),
+            
+            // Final Total and Payment Method (Right-aligned)
+            Padding(
+              padding: const EdgeInsets.only(top: 16.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text("Total: Rs. ${calculateTotal().toStringAsFixed(2)}"),
+                  DropdownButton<String>(
+                    value: paymentMethod,
+                    onChanged: (String? newValue) {
+                      setState(() {
+                        paymentMethod = newValue!;
+                      });
+                    },
+                    items: <String>['Cash', 'Card', 'Multiple']
+                        .map<DropdownMenuItem<String>>((String value) {
+                      return DropdownMenuItem<String>(
+                        value: value,
+                        child: Text(value),
+                      );
+                    }).toList(),
+                  ),
+                ],
+              ),
             ),
+            
+            // Complete Sale and Print Invoice buttons
+            Padding(
+                padding: const EdgeInsets.only(top: 16.0),
+                child: Column(
+                  children: [
+                    ElevatedButton(
+                      onPressed:
+                          completeSale, // Trigger the completeSale function
+                      child: Text("Complete Sale"),
+                    ),
+                    if (lastInvoice != null)
+                      ElevatedButton(
+                        onPressed: printInvoice,
+                        child: Text("Print Invoice"),
+                      ),
+                  ],
+                ),
+              ),
           ],
         ),
       ),
-    );
-  }
-
-  // Function to add product to cart
-  void _addProductToCart() {
-    // Example: Simply searching by Product ID
-    Product? product = products.firstWhere(
-      (product) => product.id == barcodeController.text,
-      orElse: () => Product(id: '', name: '', price: 0.0),
-    );
-
-    if (product.id.isNotEmpty) {
-      setState(() {
-        cartItems.add(product);
-        totalAmount += product.price;
-        barcodeController.clear();
-      });
-    } else {
-      _showError('Product not found!');
-    }
-  }
-
-  // Barcode scan function (via a simple input)
-  Future<void> _scanBarcode() async {
-    var result = await BarcodeScanner.scan();
-    if (result.type == ResultType.Barcode) {
-      setState(() {
-        barcodeController.text = result.rawContent;
-      });
-    }
-  }
-
-  // Checkout function
-  void _checkout() {
-    Navigator.pop(context);
-    _completeTransaction();
-  }
-
-  // Complete transaction
-  void _completeTransaction() {
-    double discountAmount = (totalAmount * discount) / 100;
-    double taxedAmount = totalAmount * tax;
-    double finalAmount = totalAmount - discountAmount + taxedAmount;
-
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: Text('Invoice'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text('Total Amount: ₹${totalAmount.toStringAsFixed(2)}'),
-            Text('Discount: ₹${discountAmount.toStringAsFixed(2)}'),
-            Text('Tax (GST): ₹${taxedAmount.toStringAsFixed(2)}'),
-            Text('Final Amount: ₹${finalAmount.toStringAsFixed(2)}'),
-            SizedBox(height: 16),
-            Text('Payment Method: $paymentMethod'),
-          ],
-        ),
-        actions: [
-          TextButton(
-            child: Text('Print Invoice'),
-            onPressed: () {
-              // Handle invoice printing (to be implemented)
-              Navigator.pop(context);
-            },
-          ),
-        ],
-      ),
-    );
-  }
-
-  // Show error dialog
-  void _showError(String message) {
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: Text('Error'),
-        content: Text(message),
-        actions: [
-          TextButton(
-            child: Text('OK'),
-            onPressed: () {
-              Navigator.pop(context);
-            },
-          ),
-        ],
-      ),
-    );
-  }
+    ),
+  );
 }
-
-class Product {
-  final String id;
-  final String name;
-  final double price;
-
-  Product({required this.id, required this.name, required this.price});
 }
