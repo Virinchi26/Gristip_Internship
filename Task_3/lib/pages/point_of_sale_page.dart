@@ -284,8 +284,7 @@ class _POSPageState extends State<POSPage> {
               TextField(
                 controller: productSearchController,
                 focusNode: productSearchFocusNode,
-                decoration:
-                    InputDecoration(labelText: "Scan Barcode / Search Product"),
+                decoration: InputDecoration(labelText: "Search by Product Name or Barcode",),
                 onChanged: (query) => filterProducts(query),
               ),
 
