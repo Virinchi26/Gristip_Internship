@@ -1,7 +1,9 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:myapp/db_helper.dart';
+import 'package:open_file/open_file.dart';
+import 'package:path_provider/path_provider.dart';
 import 'dart:async';
-import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 
 class POSPage extends StatefulWidget {
@@ -42,8 +44,11 @@ class _POSPageState extends State<POSPage> {
       }
     });
   }
+
+
     // Handle the "Complete Sale" button action
-  void completeSale() {
+  void completeSale() async {
+    // Reset the cart and customer fields inside setState to ensure the UI updates
     setState(() {
       // Reset cart and customer fields
       cart.clear();
@@ -53,10 +58,8 @@ class _POSPageState extends State<POSPage> {
       filteredProducts = List<Map<String, dynamic>>.from(
           productList); // Reset product list view
     });
-
-    // You can also trigger invoice PDF generation after the sale is completed.
-    printInvoice(); // This will generate and print the invoice
   }
+
 
   Future<void> _fetchProducts() async {
     List<Map<String, dynamic>> products = await DatabaseHelper().getRemainingStock();
@@ -165,8 +168,9 @@ class _POSPageState extends State<POSPage> {
   }
 
   // Print invoice function
-  Future<void> printInvoice() async {
+Future<void> printInvoice() async {
     final pdf = pw.Document();
+
     pdf.addPage(pw.Page(
       build: (pw.Context context) {
         return pw.Column(
@@ -192,9 +196,28 @@ class _POSPageState extends State<POSPage> {
         );
       },
     ));
-    // Print or save the PDF here
-    
+
+    // Get the application's documents directory
+    final outputDirectory = await getExternalStorageDirectory();
+    final filePath =
+        '${outputDirectory!.path}/invoice_${DateTime.now().millisecondsSinceEpoch}.pdf';
+    final file = File(filePath);
+
+    // Write the PDF file to storage
+    await file.writeAsBytes(await pdf.save());
+
+    // Open the file after saving
+    OpenFile.open(filePath);
+
+    // Optionally, you can set the path of the last invoice here for reference
+    setState(() {
+      lastInvoice = {
+        "filePath": filePath,
+        "invoiceNumber": DateTime.now().millisecondsSinceEpoch.toString()
+      };
+    });
   }
+
   @override
 Widget build(BuildContext context) {
   return Scaffold(
@@ -314,22 +337,32 @@ Widget build(BuildContext context) {
             
             // Complete Sale and Print Invoice buttons
             Padding(
-                padding: const EdgeInsets.only(top: 16.0),
-                child: Column(
-                  children: [
-                    ElevatedButton(
-                      onPressed:
-                          completeSale, // Trigger the completeSale function
-                      child: Text("Complete Sale"),
-                    ),
-                    if (lastInvoice != null)
-                      ElevatedButton(
-                        onPressed: printInvoice,
-                        child: Text("Print Invoice"),
-                      ),
-                  ],
+              padding: const EdgeInsets.only(top: 16.0),
+              child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                ElevatedButton(
+                onPressed: completeSale, // Trigger the completeSale function
+                child: Text("Complete Sale"),
                 ),
+                IconButton(
+                onPressed: () async {
+                  await printInvoice(); // Ensure the invoice is printed first
+                  setState(() {
+                  // Reset cart and customer details after printing the invoice
+                  cart.clear();
+                  customerNameController.clear();
+                  customerPhoneController.clear();
+                  productSearchController.clear();
+                  filteredProducts = List<Map<String, dynamic>>.from(
+                    productList); // Reset the products as well
+                  });
+                },
+                icon: Icon(Icons.download),
+                ),
+              ],
               ),
+            ),
           ],
         ),
       ),
