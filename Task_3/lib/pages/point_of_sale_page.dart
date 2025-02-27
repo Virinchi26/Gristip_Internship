@@ -45,19 +45,80 @@ class _POSPageState extends State<POSPage> {
     });
   }
 
-  // Handle the "Complete Sale" button action
+  // // Handle the "Complete Sale" button action
+  // void completeSale() async {
+  //   // Reset the cart and customer fields inside setState to ensure the UI updates
+  //   setState(() {
+  //     // Reset cart and customer fields
+  //     cart.clear();
+  //     customerNameController.clear();
+  //     customerPhoneController.clear();
+  //     productSearchController.clear();
+  //     filteredProducts = List<Map<String, dynamic>>.from(
+  //         productList); // Reset product list view
+  //   });
+  //   FocusScope.of(context).unfocus();
+  // }
   void completeSale() async {
-    // Reset the cart and customer fields inside setState to ensure the UI updates
+    // Ensure customer details are entered before proceeding
+    if (customerNameController.text.isEmpty ||
+        customerPhoneController.text.isEmpty) {
+      _showCustomerDetailsPrompt();
+      return;
+    }
+
+    // Prepare transaction data
+    Map<String, dynamic> transaction = {
+      "customerName": customerNameController.text,
+      "customerPhone": customerPhoneController.text,
+      "totalAmount": calculateTotal(),
+      "paymentMethod": paymentMethod,
+      "transactionDate": DateTime.now().toIso8601String(), // Store current date
+    };
+
+    // Insert transaction into the database and get the transaction ID
+    int transactionId = await DatabaseHelper().insertTransaction(transaction);
+
+    if (transactionId == null || transactionId <= 0) {
+      print("Failed to insert transaction.");
+      return;
+    }
+
+    // Insert items into the transaction_items table
+    for (var item in cart) {
+      Map<String, dynamic> transactionItem = {
+        "transactionId": transactionId, // Link to the transaction
+        "productId": item["barcode"], // Using barcode as the unique identifier
+        "quantity": item["quantity"],
+        "salePrice": item["price"],
+        "discount": item["discount"],
+        "tax": item["tax"],
+        "subtotal": calculateSubtotal(item),
+      };
+
+      // Insert the transaction item into the database
+      int result =
+          await DatabaseHelper().insertTransactionItem(transactionItem);
+
+      if (result <= 0) {
+        print("Failed to insert transaction item: ${item["name"]}");
+      }
+    }
+
+    // Reset the UI after completing the sale
     setState(() {
-      // Reset cart and customer fields
       cart.clear();
       customerNameController.clear();
       customerPhoneController.clear();
       productSearchController.clear();
-      filteredProducts = List<Map<String, dynamic>>.from(
-          productList); // Reset product list view
+      filteredProducts = List<Map<String, dynamic>>.from(productList);
     });
+
+    // Focus out
     FocusScope.of(context).unfocus();
+
+    // Optionally show a success message or perform further actions (like printing the invoice)
+    print("Sale completed successfully. Transaction ID: $transactionId");
   }
 
   Future<void> _fetchProducts() async {
@@ -92,11 +153,16 @@ class _POSPageState extends State<POSPage> {
       // If the customer name or phone number is not entered, show an alert or prompt the user
       _showCustomerDetailsPrompt();
     } else {
+      if (product["barcode"] == null) {
+        print("Product barcode is missing for item: ${product["name"]}");
+        return; // Exit if the product barcode is missing
+      }
+
       setState(() {
         cart.add({
           "srNo": cart.length + 1,
           "name": product["name"],
-          "barcode": product["barcode"],
+          "barcode": product["barcode"], // Use barcode as the unique identifier
           "quantity": 1,
           "price": product["salePrice"],
           "discount": 0.0,
@@ -284,7 +350,9 @@ class _POSPageState extends State<POSPage> {
               TextField(
                 controller: productSearchController,
                 focusNode: productSearchFocusNode,
-                decoration: InputDecoration(labelText: "Search by Product Name or Barcode",),
+                decoration: InputDecoration(
+                  labelText: "Search by Product Name or Barcode",
+                ),
                 onChanged: (query) => filterProducts(query),
               ),
 
@@ -321,9 +389,9 @@ class _POSPageState extends State<POSPage> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(
-                                    "Customer: ${customerNameController.text}"),
-                                Text("Phone: ${customerPhoneController.text}"),
+                                // Text(
+                                //     "Customer: ${customerNameController.text}"),
+                                // Text("Phone: ${customerPhoneController.text}"),
                                 Text("Product Name: ${item["name"]}"),
                                 Text("Qty: ${item["quantity"]}"),
                                 Text("Sale Price: Rs. ${item["price"]}"),
