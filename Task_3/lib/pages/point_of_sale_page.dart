@@ -59,7 +59,7 @@ class _POSPageState extends State<POSPage> {
   //   });
   //   FocusScope.of(context).unfocus();
   // }
-  void completeSale() async {
+void completeSale() async {
     // Ensure customer details are entered before proceeding
     if (customerNameController.text.isEmpty ||
         customerPhoneController.text.isEmpty) {
@@ -79,7 +79,7 @@ class _POSPageState extends State<POSPage> {
     // Insert transaction into the database and get the transaction ID
     int transactionId = await DatabaseHelper().insertTransaction(transaction);
 
-    if (transactionId == null || transactionId <= 0) {
+    if (transactionId <= 0) {
       print("Failed to insert transaction.");
       return;
     }
@@ -105,7 +105,10 @@ class _POSPageState extends State<POSPage> {
       }
     }
 
-    // Reset the UI after completing the sale
+    // Generate and print the invoice PDF
+    await printInvoice();
+
+    // Reset the UI after completing the sale and generating the invoice
     setState(() {
       cart.clear();
       customerNameController.clear();
@@ -121,6 +124,8 @@ class _POSPageState extends State<POSPage> {
     print("Sale completed successfully. Transaction ID: $transactionId");
   }
 
+
+  
   Future<void> _fetchProducts() async {
     List<Map<String, dynamic>> products =
         await DatabaseHelper().getRemainingStock();
