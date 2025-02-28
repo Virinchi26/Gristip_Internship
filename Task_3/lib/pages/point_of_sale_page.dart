@@ -5,6 +5,7 @@ import 'package:open_file/open_file.dart';
 import 'package:path_provider/path_provider.dart';
 import 'dart:async';
 import 'package:pdf/widgets.dart' as pw;
+import 'past_transactions_page.dart';
 
 class POSPage extends StatefulWidget {
   const POSPage({super.key});
@@ -327,10 +328,26 @@ void completeSale() async {
     FocusScope.of(context).unfocus();
   }
 
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text("POS System")),
+      appBar: AppBar(
+        title: Text("POS System"),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.history),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => PastTransactionsPage(),
+                ),
+              );
+            }, // Navigate to the past transactions page
+          ),
+        ],
+        ),
       body: SingleChildScrollView(
         // Wrap the entire body in a scrollable view
         child: Padding(

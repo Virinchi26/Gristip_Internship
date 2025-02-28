@@ -555,4 +555,14 @@ Future<List<String>> getProductNamesByQuery(String query) async {
     final db = await database;
     return await db.insert('transaction_items', transactionItem);
   }
+  Future<List<Map<String, dynamic>>> getTransactionWithItems() async {
+  final db = await database;
+  final result = await db.rawQuery('''
+    SELECT t.id, t.customerName, t.customerPhone, t.totalAmount, t.paymentMethod, t.transactionDate, 
+           ti.productId, ti.quantity, ti.salePrice, ti.discount, ti.tax, ti.subtotal
+    FROM transactions t
+    LEFT JOIN transaction_items ti ON t.id = ti.transactionId
+  ''');
+  return result;
+}
 }
