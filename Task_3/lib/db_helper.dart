@@ -565,4 +565,10 @@ Future<List<String>> getProductNamesByQuery(String query) async {
   ''');
   return result;
 }
+Future<List<String>> getAllPhoneNumbers() async {
+  final db = await database;
+  final result = await db.query('transactions', distinct: true, columns: ['customerPhone']);
+  return result.map((e) => e['customerPhone'] as String).toList();
+}
+
 }

@@ -24,27 +24,57 @@ class _POSPageState extends State<POSPage> {
   Map<String, dynamic>? lastInvoice;
   List<Map<String, dynamic>> filteredProducts = [];
   List<Map<String, dynamic>> productList = [];
+  bool isDeliveryMode = false; // Toggle for On-Site / Delivery mode
+  List<String> phoneNumberSuggestions = [];
+  List<String> previousPhoneNumbers =
+      []; // Store previously entered phone numbers
 
   FocusNode productSearchFocusNode = FocusNode();
-  bool showSuggestions = false; // Flag to control suggestion visibility
+  FocusNode customerPhoneFocusNode = FocusNode();
 
+  bool showPhoneSuggestions = false; // Flag for phone number suggestions
+  bool showProductSuggestions = false; // Flag for product search suggestions
   @override
   void initState() {
     super.initState();
     _fetchProducts();
+      _fetchPhoneNumbers(); // Fetch phone numbers
+      customerPhoneFocusNode.addListener(() {
+      setState(() {
+        // When the focus changes, toggle visibility of phone number suggestions
+        showPhoneSuggestions = customerPhoneFocusNode.hasFocus;
+      });
+    });
 
-    productSearchFocusNode.addListener(() {
-      if (productSearchFocusNode.hasFocus) {
-        setState(() {
-          showSuggestions = true;
-        });
-      } else {
-        setState(() {
-          showSuggestions = false;
-        });
-      }
+       productSearchFocusNode.addListener(() {
+      setState(() {
+        showProductSuggestions = productSearchFocusNode.hasFocus;
+      });
     });
   }
+  Future<void> _fetchPhoneNumbers() async {
+    List<String> numbers = await DatabaseHelper().getAllPhoneNumbers();
+    setState(() {
+      phoneNumberSuggestions = numbers;
+    });
+  }
+  //   void toggleMode(bool value) {
+  //   setState(() {
+  //     isDelivery = value;
+  //     customerNameController.clear();
+  //     customerPhoneController.clear();
+  //   });
+  // }
+
+  // void handlePhoneNumberInput(String value) {
+  //   if (isDelivery) {
+  //     // Add suggestions for phone number if in Delivery mode
+  //     setState(() {
+  //       showSuggestions = true;
+  //     });
+  //   }
+  // }
+
 
   // // Handle the "Complete Sale" button action
   // void completeSale() async {
@@ -60,13 +90,42 @@ class _POSPageState extends State<POSPage> {
   //   });
   //   FocusScope.of(context).unfocus();
   // }
+  // Show prompt when the cart is empty
+  void _showCartEmptyPrompt(String message) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text("Cart is Empty"),
+          content: Text(message),
+          actions: [
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child: Text("OK"),
+            ),
+          ],
+        );
+      },
+    );
+  }
 void completeSale() async {
-    // Ensure customer details are entered before proceeding
-    if (customerNameController.text.isEmpty ||
-        customerPhoneController.text.isEmpty) {
-      _showCustomerDetailsPrompt();
-      return;
+  if (cart.isEmpty) {
+      // If the cart is empty, show a dialog to inform the user
+      _showCartEmptyPrompt(
+          "Add product to the cart before completing the sale.");
+      return; // Stop further execution if cart is empty
     }
+  if (isDeliveryMode && customerPhoneController.text.isEmpty ){
+    _showCustomerDetailsPrompt("Phone number is required for delivery.");
+    return;
+  }
+    // // Ensure customer details are entered before proceeding
+    // if (isDelivery && customerPhoneController.text.isEmpty) {
+    //   _showCustomerDetailsPrompt("Phone number is required for delivery.");
+    //   return;
+    // }
 
     // Prepare transaction data
     Map<String, dynamic> transaction = {
@@ -138,11 +197,7 @@ void completeSale() async {
   }
 
   void filterProducts(String query) {
-    if (customerNameController.text.isEmpty ||
-        customerPhoneController.text.isEmpty) {
-      // If the customer name or phone number is not entered, show an alert or prompt the user
-      _showCustomerDetailsPrompt();
-    } else {
+
       setState(() {
         filteredProducts = productList
             .where((product) =>
@@ -150,15 +205,11 @@ void completeSale() async {
                 product["name"].toLowerCase().contains(query.toLowerCase()))
             .toList();
       });
-    }
+    
   }
 
   void addProductToCart(Map<String, dynamic> product) {
-    if (customerNameController.text.isEmpty ||
-        customerPhoneController.text.isEmpty) {
-      // If the customer name or phone number is not entered, show an alert or prompt the user
-      _showCustomerDetailsPrompt();
-    } else {
+
       if (product["barcode"] == null) {
         print("Product barcode is missing for item: ${product["name"]}");
         return; // Exit if the product barcode is missing
@@ -177,17 +228,17 @@ void completeSale() async {
         productSearchController.clear();
         filteredProducts.clear();
       });
-    }
+    
   }
 
-  void _showCustomerDetailsPrompt() {
+  // Show prompt for missing customer details
+  void _showCustomerDetailsPrompt(String message) {
     showDialog(
       context: context,
       builder: (context) {
         return AlertDialog(
           title: Text("Customer Details Missing"),
-          content:
-              Text("Please enter the customer name and phone number first."),
+          content: Text(message),
           actions: [
             ElevatedButton(
               onPressed: () {
@@ -200,6 +251,27 @@ void completeSale() async {
       },
     );
   }
+
+  //   // Add suggestions for phone number input
+  // Widget phoneNumberSuggestions() {
+  //   return showSuggestions
+  //       ? ListView.builder(
+  //           shrinkWrap: true,
+  //           itemCount: previousPhoneNumbers.length,
+  //           itemBuilder: (context, index) {
+  //             return ListTile(
+  //               title: Text(previousPhoneNumbers[index]),
+  //               onTap: () {
+  //                 setState(() {
+  //                   customerPhoneController.text = previousPhoneNumbers[index];
+  //                   showSuggestions = false; // Hide suggestions after selecting
+  //                 });
+  //               },
+  //             );
+  //           },
+  //         )
+  //       : SizedBox.shrink();
+  // }
 
   double calculateSubtotal(Map<String, dynamic> item) {
     return (item["price"] * item["quantity"]) -
@@ -336,6 +408,20 @@ void completeSale() async {
         title: Text("POS System"),
         actions: [
           IconButton(
+            icon: Icon(isDeliveryMode ? Icons.delivery_dining : Icons.store),
+            onPressed: () {
+              setState(() {
+                isDeliveryMode = !isDeliveryMode;
+                customerPhoneController
+                    .clear(); // Clear phone number when switching modes
+                phoneNumberSuggestions.clear(); // Clear suggestions
+                if (isDeliveryMode) {
+                  _fetchPhoneNumbers(); // Fetch phone numbers only when in Delivery mode
+                }
+              });
+            },
+          ),
+          IconButton(
             icon: Icon(Icons.history),
             onPressed: () {
               Navigator.push(
@@ -346,6 +432,7 @@ void completeSale() async {
               );
             }, // Navigate to the past transactions page
           ),
+          
         ],
         ),
       body: SingleChildScrollView(
@@ -355,18 +442,63 @@ void completeSale() async {
           child: Column(
             children: [
               // Customer Name and Phone Fields (Required)
-              TextField(
-                controller: customerNameController,
-                decoration: InputDecoration(labelText: "Customer Name"),
-              ),
-
+              // if (!isDeliveryMode)
+                TextField(
+                  controller: customerNameController,
+                  decoration: InputDecoration(labelText: "Customer Name (Optional)"),
+                ),
+                
               TextField(
                 controller: customerPhoneController,
-                keyboardType:
-                    TextInputType.phone, // Set the keyboard type to phone
-                decoration: InputDecoration(labelText: "Customer Phone"),
-                maxLength: 10, // Limit the input to 10 digits
+                focusNode: customerPhoneFocusNode,
+                keyboardType: TextInputType.phone,
+                decoration: InputDecoration(
+                  // labelText: "Customer Phone",
+                  labelText: isDeliveryMode
+                      ? "Customer Phone (Required)"
+                      : "Customer Phone (Optional)",
+                ),
+                maxLength: 10,
+                onChanged: (query) {
+                  setState(() {
+                    // Filter phone number suggestions based on user input
+                    phoneNumberSuggestions = phoneNumberSuggestions
+                        .where((phone) => phone.startsWith(query))
+                        .toList();
+                  });
+                },
               ),
+              // // if (isDeliveryMode && customerPhoneController.text.isEmpty)
+              // //   Text(
+              // //     "Phone number is required for delivery.",
+              // //     style: TextStyle(color: Colors.red),
+              // //   ),
+
+              if (showPhoneSuggestions && phoneNumberSuggestions.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8.0),
+                  child: ListView.builder(
+                    shrinkWrap:
+                        true, // Prevent the list from taking up unnecessary space
+                    itemCount: phoneNumberSuggestions.length,
+                    itemBuilder: (context, index) {
+                      return ListTile(
+                        title: Text(phoneNumberSuggestions[index]),
+                        onTap: () {
+                          setState(() {
+                            customerPhoneController.text =
+                                phoneNumberSuggestions[index];
+                            phoneNumberSuggestions
+                                .clear(); // Hide suggestions after selection
+                          });
+                        },
+                      );
+                    },
+                  ),
+                ),
+
+
+              // Show phone number suggestions in Delivery mode
 
               // Product Search Field
               TextField(
@@ -379,7 +511,7 @@ void completeSale() async {
               ),
 
               // Product Suggestions
-              if (showSuggestions && filteredProducts.isNotEmpty)
+              if (showProductSuggestions && filteredProducts.isNotEmpty)
                 SizedBox(
                   height: 150,
                   child: ListView.builder(
